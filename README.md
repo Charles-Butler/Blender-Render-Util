@@ -19,10 +19,17 @@ These utilities streamline the Blender rendering workflow by providing:
 Executes multiple Blender rendering batches with automatic logging and organization.
 
 **Features:**
-- Interactive case/game name prompt
+- Interactive project name prompt
+- **Dynamic batch queue creation**
+  - User inputs start/end frames for each batch
+  - Optional batch naming
+  - Priority assignment (High/Low)
+- **Intelligent batch sorting**
+  - High priority batches render first
+  - Within priority groups: smallest batches first
 - Timestamp-based output directories
 - Automatic log file creation
-- Sequential batch rendering
+- Path validation (Blender executable and .blend file)
 - Audio notification on completion
 
 **Usage:**
@@ -30,13 +37,46 @@ Executes multiple Blender rendering batches with automatic logging and organizat
 ./batchedFrame_render.sh
 ```
 
-You'll be prompted to enter a case/game name, and rendering will begin automatically.
+**Interactive Workflow:**
+1. Enter project name
+2. For each batch, provide:
+   - Start frame
+   - End frame (inclusive)
+   - Batch name (optional)
+   - Priority: H (High) or L (Low) - defaults to High
+3. Type `done` when finished adding batches
+4. Review sorted queue summary
+5. Confirm to start rendering
+
+**Example:**
+```
+Enter Project Name: MyAnimation
+
+Batch #1
+  Start Frame: 100
+  End Frame: 200
+  Batch Name: Intro
+  Priority (H=High, L=Low) [H]: H
+  ✅ Added: Intro [Priority: H] (Frames 100-200, 101 frames)
+
+Batch #2
+  Start Frame: 500
+  End Frame: 800
+  Batch Name: Main Scene
+  Priority (H=High, L=Low) [H]: L
+  ✅ Added: Main Scene [Priority: L] (Frames 500-800, 301 frames)
+
+Start Frame: done
+
+[Queue Summary Table]
+Start rendering? (Y/n): Y
+```
 
 **Output Structure:**
 ```
 ./renders/
-└── {CASE_NAME}_{TIMESTAMP}/
-    └── {CASE_NAME}_{TIMESTAMP}_render_log.txt
+└── {PROJECT_NAME}_{TIMESTAMP}/
+    └── {PROJECT_NAME}_{TIMESTAMP}_render_log.txt
 ```
 
 ---
@@ -54,7 +94,7 @@ Real-time monitoring script that tracks rendering progress with visual feedback 
 
 **Option 2: Monitor existing log**
 ```bash
-tail -f ./renders/CASE_NAME/log_file.txt | ./watch_render_progress.sh
+tail -f ./renders/PROJECT_NAME/log_file.txt | ./watch_render_progress.sh
 ```
 
 **Option 3: Provide log file as argument**
@@ -89,7 +129,7 @@ The script will automatically detect running Blender processes and offer to moni
 - Frame completion percentage
 - ETA calculations based on average frame time
 
-### v2.2 - Dual Progress Tracking *(Current)*
+### v2.2 - Dual Progress Tracking
 - **Batch Progress Bar**: Tracks current batch completion
 - **Overall Progress Bar**: Tracks total render progress across all batches
 - Pre-scanning of existing logs for accurate resume tracking
@@ -101,6 +141,22 @@ The script will automatically detect running Blender processes and offer to moni
   - Out of memory errors
 - Batch configuration parsing from render script
 - Bash 3 compatibility for macOS
+
+### v2.3 - Interactive Batch Queue System *(Current)*
+- **Interactive Batch Input**: User defines frame ranges dynamically
+  - Start/end frame validation
+  - Optional batch naming
+  - Input validation with error handling
+- **Priority-Based Queue Management**:
+  - High (H) or Low (L) priority assignment per batch
+  - Automatic sorting: High priority first, then by frame count (smallest first)
+  - Optimizes for quick wins on important batches
+- **Enhanced Queue Summary**:
+  - Visual table showing all batches with priorities
+  - Total batch and frame count
+  - Confirmation before rendering starts
+- **Path Validation**: Checks for Blender executable and .blend file before starting
+- **Error Resilience**: Captures exit codes and continues on batch failures
 
 ---
 
@@ -133,20 +189,33 @@ The monitoring script automatically detects and highlights:
 - **Texture size errors** (exceeds 16384x16384)
 - **Out of memory errors** (insufficient RAM)
 
-### Batch Configuration
+### Batch Queue System
 
-Current render batches (527 total frames):
+**Priority-Based Sorting:**
 
-| Batch | Frame Range | Frames | Order |
-|-------|-------------|--------|-------|
-| 5     | 973-999     | 27     | 1st   |
-| 8     | 0-59        | 60     | 2nd   |
-| 6     | 1059-1130   | 72     | 3rd   |
-| 4     | 795-869     | 75     | 4th   |
-| 7     | 1130-1230   | 101    | 5th   |
-| 2     | 642-672     | 31     | 6th   |
-| 3     | 702-755     | 54     | 7th   |
-| 1     | 494-600     | 107    | 8th   |
+Batches are automatically sorted by:
+1. **Priority**: High (H) batches render before Low (L) batches
+2. **Frame Count**: Within same priority, smaller batches render first
+
+This optimization ensures:
+- Quick completion of high-priority content
+- Early feedback on important scenes
+- Efficient use of rendering time
+
+**Example Queue:**
+
+| Order | Batch Name    | Priority | Frame Range | Frames | Rationale                      |
+|-------|---------------|----------|-------------|--------|--------------------------------|
+| 1     | Quick Test    | H        | 100-110     | 11     | High priority, smallest        |
+| 2     | Hero Shot     | H        | 500-650     | 151    | High priority, larger          |
+| 3     | BG Elements   | L        | 50-100      | 51     | Low priority, smallest         |
+| 4     | Full Sequence | L        | 1000-1500   | 501    | Low priority, largest          |
+
+**Interactive Input:**
+- No hardcoded frame ranges
+- Fully dynamic queue creation
+- Add as many batches as needed
+- Cancel or finish at any time
 
 ---
 
@@ -160,14 +229,6 @@ Current render batches (527 total frames):
 ---
 
 ## Configuration
-
-### Modifying Batch Ranges
-
-Edit `batchedFrame_render.sh` and update the Blender command flags:
-
-```bash
-$BLENDER_PATH -b "$BLEND_FILE" -s START_FRAME -e END_FRAME -a
-```
 
 ### Changing Blender File Path
 
@@ -224,12 +285,73 @@ MIT
 
 ---
 
+## Git Workflow
+
+This repository follows a structured branching model for development and releases:
+
+```
+feature/* → develop → release/* → main → (back-merge to) develop
+```
+
+### Branch Structure
+
+- **`main`** - Production/stable releases only (protected)
+- **`develop`** - Default branch for ongoing development
+- **`feature/*`** - Individual feature development branches
+- **`release/*`** - Release preparation branches
+
+### Workflow
+
+**1. Feature Development:**
+```bash
+git checkout develop
+git checkout -b feature/feature-name
+# ... make changes ...
+git add .
+git commit -m "Add feature description"
+```
+
+**2. Merge Features into Develop:**
+```bash
+git checkout develop
+git merge feature/feature-name
+git push origin develop
+```
+
+**3. Create Release Branch:**
+```bash
+git checkout develop
+git checkout -b release/v2.3
+# ... final testing and version updates ...
+git commit -m "Prepare release v2.3"
+```
+
+**4. Merge to Production (main):**
+```bash
+git checkout main
+git merge release/v2.3
+git tag v2.3
+git push origin main --tags
+```
+
+**5. Back-merge to Develop:**
+```bash
+git checkout develop
+git merge main
+git push origin develop
+```
+
+---
+
 ## Future Enhancements
 
-- [ ] Configuration file for batch ranges
-- [ ] Support for multiple .blend files
-- [ ] Email/notification on completion
+- [ ] Configuration file for paths and defaults
+- [ ] Support for multiple .blend files in one session
+- [ ] Save/load batch queue presets
+- [ ] Email/SMS notifications on completion
 - [ ] Web dashboard for remote monitoring
-- [ ] Automatic retry on failed frames
 - [ ] GPU vs CPU render detection
 - [ ] Render farm distribution support
+- [ ] Resume failed batches from queue
+- [ ] Export queue summary as CSV/JSON
+- [ ] Parallel batch rendering support
