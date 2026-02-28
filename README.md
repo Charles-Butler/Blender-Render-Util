@@ -224,6 +224,64 @@ MIT
 
 ---
 
+## Git Workflow
+
+This repository follows a structured branching model for development and releases:
+
+```
+feature/* → develop → release/* → main → (back-merge to) develop
+```
+
+### Branch Structure
+
+- **`main`** - Production/stable releases only (protected)
+- **`develop`** - Default branch for ongoing development
+- **`feature/*`** - Individual feature development branches
+- **`release/*`** - Release preparation branches
+
+### Workflow
+
+**1. Feature Development:**
+```bash
+git checkout develop
+git checkout -b feature/feature-name
+# ... make changes ...
+git add .
+git commit -m "Add feature description"
+```
+
+**2. Merge Features into Develop:**
+```bash
+git checkout develop
+git merge feature/feature-name
+git push origin develop
+```
+
+**3. Create Release Branch:**
+```bash
+git checkout develop
+git checkout -b release/v2.3
+# ... final testing and version updates ...
+git commit -m "Prepare release v2.3"
+```
+
+**4. Merge to Production (main):**
+```bash
+git checkout main
+git merge release/v2.3
+git tag v2.3
+git push origin main --tags
+```
+
+**5. Back-merge to Develop:**
+```bash
+git checkout develop
+git merge main
+git push origin develop
+```
+
+---
+
 ## Future Enhancements
 
 - [ ] Configuration file for batch ranges
