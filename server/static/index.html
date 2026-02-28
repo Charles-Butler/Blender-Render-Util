@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Blender Render Monitor</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+          Oxygen, Ubuntu, Cantarell, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #333;
+        padding: 20px;
+        min-height: 100vh;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      .card {
+        background: white;
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+
+      .header {
+        text-align: center;
+        margin-bottom: 30px;
+      }
+
+      .header h1 {
+        font-size: 2.5rem;
+        color: white;
+        margin-bottom: 10px;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+      }
+
+      .header .project-name {
+        font-size: 1.2rem;
+        color: rgba(255, 255, 255, 0.9);
+        font-weight: 300;
+      }
+
+      .status-badge {
+        display: inline-block;
+        padding: 6px 16px;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        margin-top: 10px;
+      }
+
+      .status-badge.idle {
+        background: #f3f4f6;
+        color: #6b7280;
+      }
+
+      .status-badge.rendering {
+        background: #10b981;
+        color: white;
+        animation: pulse 2s ease-in-out infinite;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.7;
+        }
+      }
+
+      .section-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 16px;
+        color: #374151;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .progress-container {
+        margin-bottom: 20px;
+      }
+
+      .progress-label {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 8px;
+        font-size: 0.95rem;
+        color: #6b7280;
+      }
+
+      .progress-bar-bg {
+        width: 100%;
+        height: 32px;
+        background: #e5e7eb;
+        border-radius: 8px;
+        overflow: hidden;
+        position: relative;
+      }
+
+      .progress-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        transition: width 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+        font-size: 0.9rem;
+      }
+
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+        margin-top: 20px;
+      }
+
+      .stat-box {
+        background: #f9fafb;
+        border-radius: 8px;
+        padding: 16px;
+        text-align: center;
+      }
+
+      .stat-label {
+        font-size: 0.85rem;
+        color: #6b7280;
+        margin-bottom: 8px;
+      }
+
+      .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #1f2937;
+      }
+
+      .queue-list {
+        list-style: none;
+      }
+
+      .queue-item {
+        padding: 12px;
+        margin-bottom: 8px;
+        border-radius: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #f9fafb;
+      }
+
+      .queue-item.active {
+        background: #dbeafe;
+        border-left: 4px solid #3b82f6;
+      }
+
+      .queue-item.completed {
+        background: #d1fae5;
+        border-left: 4px solid #10b981;
+      }
+
+      .priority-badge {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+      }
+
+      .priority-high {
+        background: #fef3c7;
+        color: #92400e;
+      }
+
+      .priority-low {
+        background: #e5e7eb;
+        color: #6b7280;
+      }
+
+      .connection-status {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .connection-status.connected {
+        background: #10b981;
+        color: white;
+      }
+
+      .connection-status.disconnected {
+        background: #ef4444;
+        color: white;
+      }
+
+      .error-message {
+        background: #fee2e2;
+        border-left: 4px solid #ef4444;
+        padding: 12px;
+        margin-top: 12px;
+        border-radius: 4px;
+        color: #991b1b;
+      }
+
+      @media (max-width: 768px) {
+        .header h1 {
+          font-size: 1.8rem;
+        }
+
+        .stats-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="connection-status" id="connectionStatus">● Connecting...</div>
+
+    <div class="container">
+      <div class="header">
+        <h1>🎬 Blender Render Monitor</h1>
+        <div class="project-name" id="projectName">Loading...</div>
+        <span class="status-badge idle" id="statusBadge">Idle</span>
+      </div>
+
+      <!-- Current Batch Progress -->
+      <div class="card">
+        <div class="section-title">📊 Current Batch Progress</div>
+        <div class="progress-container">
+          <div class="progress-label">
+            <span id="batchLabel">Waiting for render...</span>
+            <span id="batchPercent">0%</span>
+          </div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" id="batchProgress" style="width: 0%">
+              0%
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Overall Progress -->
+      <div class="card">
+        <div class="section-title">🌍 Overall Progress</div>
+        <div class="progress-container">
+          <div class="progress-label">
+            <span id="overallLabel">0 / 0 frames</span>
+            <span id="overallPercent">0%</span>
+          </div>
+          <div class="progress-bar-bg">
+            <div
+              class="progress-bar-fill"
+              id="overallProgress"
+              style="width: 0%"
+            >
+              0%
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Statistics -->
+      <div class="card">
+        <div class="section-title">📈 Statistics</div>
+        <div class="stats-grid">
+          <div class="stat-box">
+            <div class="stat-label">⏱️ Frame Time</div>
+            <div class="stat-value" id="frameTime">--:--</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">📊 Avg/Frame</div>
+            <div class="stat-value" id="avgFrameTime">--:--</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">⏳ Batch ETA</div>
+            <div class="stat-value" id="batchEta">--:--:--</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">🌍 Overall ETA</div>
+            <div class="stat-value" id="overallEta">--:--:--</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">🕐 Elapsed Time</div>
+            <div class="stat-value" id="elapsedTime">--:--:--</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">✅ Frames Done</div>
+            <div class="stat-value" id="framesCompleted">0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Batch Queue -->
+      <div class="card">
+        <div class="section-title">📋 Batch Queue</div>
+        <ul class="queue-list" id="queueList">
+          <li class="queue-item">
+            <span>No batches queued</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Errors -->
+      <div class="card" id="errorsCard" style="display: none">
+        <div class="section-title">⚠️ Errors</div>
+        <div id="errorsList"></div>
+      </div>
+    </div>
+
+    <script>
+      let ws;
+      let reconnectInterval;
+
+      function connectWebSocket() {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws`;
+
+        ws = new WebSocket(wsUrl);
+
+        ws.onopen = () => {
+          console.log('WebSocket connected');
+          updateConnectionStatus(true);
+          clearInterval(reconnectInterval);
+        };
+
+        ws.onmessage = (event) => {
+          const message = JSON.parse(event.data);
+          console.log('Received:', message);
+          updateUI(message);
+        };
+
+        ws.onclose = () => {
+          console.log('WebSocket disconnected');
+          updateConnectionStatus(false);
+          reconnectInterval = setInterval(connectWebSocket, 3000);
+        };
+
+        ws.onerror = (error) => {
+          console.error('WebSocket error:', error);
+        };
+      }
+
+      function updateConnectionStatus(connected) {
+        const statusEl = document.getElementById('connectionStatus');
+        if (connected) {
+          statusEl.className = 'connection-status connected';
+          statusEl.textContent = '● Connected';
+        } else {
+          statusEl.className = 'connection-status disconnected';
+          statusEl.textContent = '● Disconnected';
+        }
+      }
+
+      function updateUI(message) {
+        const data = message.data;
+
+        // Update project name
+        if (data.project_name) {
+          document.getElementById('projectName').textContent =
+            data.project_name;
+        }
+
+        // Update status badge
+        const statusBadge = document.getElementById('statusBadge');
+        if (data.status) {
+          statusBadge.textContent =
+            data.status.charAt(0).toUpperCase() + data.status.slice(1);
+          statusBadge.className = `status-badge ${data.status}`;
+        }
+
+        // Update batch progress
+        if (data.batch_progress !== undefined) {
+          const batchProgress = document.getElementById('batchProgress');
+          batchProgress.style.width = data.batch_progress + '%';
+          batchProgress.textContent = data.batch_progress + '%';
+          document.getElementById('batchPercent').textContent =
+            data.batch_progress + '%';
+        }
+
+        if (data.current_batch && data.current_frame) {
+          const batchLabel = `Batch #${data.current_batch}: Frame ${data.current_frame}`;
+          document.getElementById('batchLabel').textContent = batchLabel;
+        }
+
+        // Update overall progress
+        if (data.overall_progress !== undefined) {
+          const overallProgress = document.getElementById('overallProgress');
+          overallProgress.style.width = data.overall_progress + '%';
+          overallProgress.textContent = data.overall_progress + '%';
+          document.getElementById('overallPercent').textContent =
+            data.overall_progress + '%';
+        }
+
+        if (
+          data.frames_completed !== undefined &&
+          data.total_frames !== undefined
+        ) {
+          document.getElementById(
+            'overallLabel'
+          ).textContent = `${data.frames_completed} / ${data.total_frames} frames`;
+          document.getElementById('framesCompleted').textContent =
+            data.frames_completed;
+        }
+
+        // Update statistics
+        if (data.avg_frame_time !== undefined) {
+          document.getElementById('avgFrameTime').textContent = formatSeconds(
+            data.avg_frame_time
+          );
+        }
+
+        if (data.frame_time !== undefined) {
+          document.getElementById('frameTime').textContent = formatSeconds(
+            data.frame_time
+          );
+        }
+
+        if (data.batch_eta) {
+          document.getElementById('batchEta').textContent = data.batch_eta;
+        }
+
+        if (data.overall_eta) {
+          document.getElementById('overallEta').textContent = data.overall_eta;
+        }
+
+        if (data.elapsed_time) {
+          document.getElementById('elapsedTime').textContent =
+            data.elapsed_time;
+        }
+
+        // Update errors
+        if (data.errors && data.errors.length > 0) {
+          document.getElementById('errorsCard').style.display = 'block';
+          const errorsList = document.getElementById('errorsList');
+          errorsList.innerHTML = data.errors
+            .map((err) => `<div class="error-message">${err}</div>`)
+            .join('');
+        }
+      }
+
+      function formatSeconds(seconds) {
+        if (!seconds || seconds === 0) return '--:--';
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins.toString().padStart(2, '0')}:${secs
+          .toString()
+          .padStart(2, '0')}`;
+      }
+
+      // Connect on page load
+      connectWebSocket();
+    </script>
+  </body>
+</html>
