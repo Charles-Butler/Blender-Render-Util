@@ -8,22 +8,22 @@ echo "        Blender Batch Render - Interactive Queue System"
 echo "================================================================"
 echo
 
-# Ask user for case/game name
-read -p "Enter Case/Game Name (no spaces, use underscores if needed): " CASE_NAME
-echo "Case Name Set To: $CASE_NAME"
+# Ask user for project name
+read -p "Enter Project Name (no spaces, use underscores if needed): " PROJECT_NAME
+echo "Project Name Set To: $PROJECT_NAME"
 echo
 
 # Generate timestamp
 TIMESTAMP=$(date +%Y-%m-%d_%H-%M-%S)
 
 # Create output directory
-OUTPUT_DIR="./renders/${CASE_NAME}_${TIMESTAMP}"
+OUTPUT_DIR="./renders/${PROJECT_NAME}_${TIMESTAMP}"
 mkdir -p "$OUTPUT_DIR"
 echo "Created output directory at: $OUTPUT_DIR"
 echo
 
 # Set log file path
-LOGFILE="${OUTPUT_DIR}/${CASE_NAME}_${TIMESTAMP}_render_log.txt"
+LOGFILE="${OUTPUT_DIR}/${PROJECT_NAME}_${TIMESTAMP}_render_log.txt"
 
 # Define .blend file path & Blender App Path
 BLEND_FILE="/Users/me/Podcast/3D-Animation/WIP - Blender/Delivery/FILE ANIM/TOR_caseSwap.blend"
@@ -252,7 +252,7 @@ echo
 # Start capturing output to log file
 {
     echo "================================================================"
-    echo "🎬 Rendering Batch for: $CASE_NAME at $TIMESTAMP"
+    echo "🎬 Rendering Batch for: $PROJECT_NAME at $TIMESTAMP"
     echo "================================================================"
     echo "Blend File: $BLEND_FILE"
     echo "Output Dir: $OUTPUT_DIR"
@@ -293,7 +293,7 @@ echo
     done
 
     echo "================================================================"
-    echo "🏁 ALL RENDERING JOBS COMPLETED for $CASE_NAME!"
+    echo "🏁 ALL RENDERING JOBS COMPLETED for $PROJECT_NAME!"
     echo "================================================================"
     echo "Total Batches Processed: $BATCH_COUNT"
     echo "Total Frames Rendered: $TOTAL_FRAMES"
