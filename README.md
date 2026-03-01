@@ -16,20 +16,16 @@ These utilities streamline the Blender rendering workflow by providing:
 
 ## Quick Start
 
-### 1. Start a Render Job
+### Option A: Web-Based Workflow (Recommended)
 
-```bash
-./batchedFrame_render.sh
-```
-
-### 2. Start the Web Monitoring Server
+**1. Start the Backend Server**
 
 ```bash
 cd server
-python3 app.py --port 8081 --logfile /path/to/render_log.txt --project "ProjectName" --batches 8 --frames 527
+python3 app.py --port 8081
 ```
 
-### 3. Start the Frontend Dashboard
+**2. Start the Frontend Dashboard**
 
 ```bash
 cd server/frontend
@@ -37,10 +33,40 @@ npm install
 npm run dev -- --host 0.0.0.0
 ```
 
-### 4. Access the Dashboard
+**3. Access the Dashboard**
 
 - **Local:** http://localhost:5173/
 - **Network:** http://YOUR_IP:5173/ (accessible from other devices)
+
+**4. Configure and Start Render**
+
+1. Navigate to the **Configure** page
+2. Enter project name and select blend file
+3. Add batches using the **+** button (set frame ranges and priority)
+4. Review the render order preview
+5. Click **🚀 Start Job** to begin rendering
+6. Switch to **Monitor** page to watch real-time progress
+
+### Option B: CLI-Only Workflow (Legacy)
+
+**1. Start a Render Job**
+
+```bash
+./batchedFrame_render.sh
+```
+
+**2. Monitor Progress (Optional)**
+
+Terminal-based:
+```bash
+./watch_render_progress.sh /path/to/render_log.txt
+```
+
+Or start web monitoring:
+```bash
+cd server
+python3 app.py --port 8081 --logfile /path/to/render_log.txt --project "ProjectName" --batches 8 --frames 527
+```
 
 ---
 
@@ -267,41 +293,51 @@ The script will automatically detect running Blender processes and offer to moni
 - **Path Validation**: Checks for Blender executable and .blend file before starting
 - **Error Resilience**: Captures exit codes and continues on batch failures
 
-### v3.0 - Web-Based Real-Time Monitoring System _(Current)_
+### v3.0 - Web-Based Configuration & Real-Time Monitoring System _(Current)_
 
-- **React-Based Web Dashboard**:
-  - Modern single-page application (SPA) with Vite + React
-  - Real-time updates via WebSocket
-  - Responsive design for desktop and mobile
-  - Centered layout with max-width 1000px container
-- **FastAPI Backend Server**:
-  - RESTful API endpoints for status, queue, and statistics
-  - WebSocket support for live progress updates
+- **Two-Page React Application**:
+  - **Configure Page**: Full batch render job setup interface
+    - Interactive project settings (name, blend file selection)
+    - Frame selection with +/- controls for adding/removing batches
+    - Live render order preview showing sorted batch execution
+    - Full batch queue table with status tracking
+    - Dual action buttons: Start Job / Cancel Job
+    - Read-only mode when monitoring active renders
+  - **Monitor Page**: Real-time progress dashboard
+    - Live WebSocket updates every 2 seconds
+    - Overall and batch progress bars
+    - Statistics panel with ETAs and timing metrics
+    - Priority-based batch lists (high/low/completed)
+- **Modern UI/UX**:
+  - Sidebar navigation (desktop) with hamburger drawer (tablet/mobile ≤1024px)
+  - Responsive 2-column layout (1fr × 1.5fr grid)
+  - Centered content with 1200px max-width
+  - Version footer in navigation menu
+  - Gradient color-coded priority badges (yellow=high, blue=low)
+- **Configuration Management**:
+  - JSON-based persistent settings (`config.json`)
+  - Recent blend files tracking (max 10)
+  - Last used project settings
+  - Python ConfigManager with dot-notation access
+- **Simplified Priority System**:
+  - Binary priority: High (1) or Low (null/default)
+  - High priority batches render first, then sorted by frame count
+  - Color-coded badges for instant recognition
+- **FastAPI Backend**:
+  - RESTful API: `/api/config`, `/api/blend-files`, `/api/render/start`, `/api/render/cancel`
+  - WebSocket endpoint for real-time updates
   - Efficient log parsing with grep for large files (850K+ lines)
   - Auto-detection of render start time from log filename
-- **Priority System Upgrade**:
-  - Numeric priority system: 1 (High), 0 (Low), null (No priority)
-  - Smart default behavior: batches without priority tagged as low priority
-  - Visual distinction in dashboard for high/low/completed batches
-- **Advanced Progress Tracking**:
-  - Overall progress (full-width display)
-  - Current batch progress with frame range detection
-  - Statistics panel: frame time, average time, batch ETA, overall ETA, elapsed time
-  - Real-time elapsed time calculation from render start timestamp
 - **Multi-Device Support**:
-  - Access dashboard from any device on local network
-  - Dynamic WebSocket connection based on hostname
+  - Access from any device on local network
+  - Responsive design for desktop, tablet, and mobile
   - Network-accessible Vite dev server with `--host 0.0.0.0`
-- **Intelligent Log Monitoring**:
+- **Intelligent Monitoring**:
   - Automatic timestamp parsing from log filename (YYYY-MM-DD_HH-MM-SS)
   - Frame counting from "Append frame" lines (Blender 4.x)
   - Batch detection from "Now Rendering Scenes" and "Finished Scenes" markers
-  - Priority tag parsing: `[Priority: 1]`, `[Priority: 0]`, or `[Priority: null]`
-- **Enhanced UI/UX**:
-  - Connection status indicator
-  - Gradient color-coded priority cards (yellow=high, blue=low, green=completed)
-  - Mobile-responsive with vertical stacking
-  - No scrollbars on batch lists for cleaner appearance
+  - Priority tag parsing: `[Priority: 1]` or `[Priority: null]`
+  - Status tracking per batch: Pending → Rendering → Completed
 
 ---
 
