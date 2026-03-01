@@ -213,6 +213,21 @@ class LogMonitor:
                     if has_incomplete:
                         self.callback({'status': 'rendering'})
 
+                    # Set start time from log filename timestamp (e.g., 2026-02-27_18-07-23)
+                    import time
+                    import re
+                    from datetime import datetime
+
+                    # Extract timestamp from filename like "005_TOR_RER_2026-02-27_18-07-23_render_log.txt"
+                    filename = self.log_file.name
+                    timestamp_match = re.search(r'(\d{4})-(\d{2})-(\d{2})_(\d{2})-(\d{2})-(\d{2})', filename)
+                    if timestamp_match:
+                        year, month, day, hour, minute, second = map(int, timestamp_match.groups())
+                        dt = datetime(year, month, day, hour, minute, second)
+                        start_time = dt.timestamp()
+                        self.callback({'start_time': start_time})
+                        print(f"✓ Render started at: {dt.strftime('%Y-%m-%d %H:%M:%S')}")
+
             # Mark initial scan complete
             self.state['initial_scan_complete'] = True
 
