@@ -156,10 +156,12 @@ async def websocket_endpoint(websocket: WebSocket):
 
     try:
         # Send initial state
+        print(f"Sending initial state to WebSocket client")
         await websocket.send_json({
             "type": "init",
             "data": render_state
         })
+        print(f"Initial state sent successfully")
 
         # Keep connection alive with periodic heartbeat
         while True:
@@ -171,9 +173,12 @@ async def websocket_endpoint(websocket: WebSocket):
             })
 
     except WebSocketDisconnect:
+        print(f"WebSocket client disconnected normally")
         manager.disconnect(websocket)
     except Exception as e:
         print(f"WebSocket error: {e}")
+        import traceback
+        traceback.print_exc()
         manager.disconnect(websocket)
 
 

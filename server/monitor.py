@@ -36,7 +36,7 @@ class LogMonitor:
             'batch_start': re.compile(r'Now Rendering Scenes:\s+(\d+)\s+-\s+(\d+)'),
             'batch_name': re.compile(r'Batch:\s+(.+?)\s+\(\d+/\d+\)'),
             'batch_complete': re.compile(r'Finished Scenes:\s+(\d+)\s+-\s+(\d+)'),
-            'batch_priority': re.compile(r'\[Priority:\s*([HL])\]'),
+            'batch_priority': re.compile(r'\[Priority:\s*([01HL]|null)\]'),
             'frame_progress': re.compile(r'Fra:(\d+).*Time:([0-9:\.]+).*Remaining:([0-9:\.]+)'),
             'frame_saved': re.compile(r'Saved:.*\.(png|exr|jpg)'),
             'frame_append': re.compile(r'Append frame (\d+)'),
@@ -71,6 +71,9 @@ class LogMonitor:
 
             self.running = True
 
+            # Start initial file read FIRST (before polling to avoid double-counting)
+            self._read_existing_content()
+
             if WATCHDOG_AVAILABLE:
                 # Set up file watcher
                 self.file_handler = LogFileHandler(self.log_file, self.process_new_lines)
@@ -87,8 +90,6 @@ class LogMonitor:
                 print(f"📊 Monitoring log file (polling): {self.log_file}")
                 self._start_polling()
 
-            # Start initial file read
-            self._read_existing_content()
             print(f"✓ Log monitor started successfully")
 
         except Exception as e:
@@ -190,7 +191,7 @@ class LogMonitor:
                             'start': start,
                             'end': end,
                             'frames': end - start + 1,
-                            'priority': 'H',  # Default to High (will be updated if we see priority markers)
+                            'priority': '1',  # Default to high priority (will be updated if we see priority markers)
                             'completed': is_completed,
                             'name': f'Batch {line_num}'
                         }
@@ -206,6 +207,11 @@ class LogMonitor:
                 if self.state['batches']:
                     self._send_batch_stats()
                     print(f"✓ Found {len(self.state['batches'])} batches ({len(completed_ranges)} completed)")
+
+                    # Set status to rendering if there are incomplete batches
+                    has_incomplete = any(not batch['completed'] for batch in self.state['batches'])
+                    if has_incomplete:
+                        self.callback({'status': 'rendering'})
 
             # Mark initial scan complete
             self.state['initial_scan_complete'] = True
@@ -248,7 +254,9 @@ class LogMonitor:
             # Also check for priority on this line (in case it wasn't on the batch_start line)
             priority_match = self.patterns['batch_priority'].search(line)
             if priority_match:
-                priority = priority_match.group(1)
+                priority_raw = priority_match.group(1)
+                # Normalize: '1' or 'H' = high priority, everything else = low priority
+                priority = '1' if priority_raw in ('1', 'H') else '0'
                 self.state['batches'][-1]['priority'] = priority
                 self.state['current_batch_priority'] = priority
                 # Re-send batch stats with updated priority
@@ -276,7 +284,11 @@ class LogMonitor:
 
                 # Check for priority in the line
                 priority_match = self.patterns['batch_priority'].search(line)
-                priority = priority_match.group(1) if priority_match else 'H'  # Default to High
+                if priority_match:
+                    priority_raw = priority_match.group(1)
+                    priority = '1' if priority_raw in ('1', 'H') else '0'
+                else:
+                    priority = '0'  # Default to low priority (no priority set)
                 self.state['current_batch_priority'] = priority
 
                 # Add batch to batches list (name will be added when we see the next line)
@@ -328,9 +340,24 @@ class LogMonitor:
             self.state['frame_times'].append(frame_seconds)
             self.state['current_frame'] = frame
 
+            # Find which batch this frame belongs to
+            current_batch_number = None
+            batch_start = self.state['batch_start_frame']
+            batch_end = self.state['batch_end_frame']
+
+            for batch in self.state['batches']:
+                if batch['start'] <= frame <= batch['end'] and not batch['completed']:
+                    current_batch_number = batch['number']
+                    batch_start = batch['start']
+                    batch_end = batch['end']
+                    self.state['current_batch'] = batch['number']
+                    self.state['batch_start_frame'] = batch_start
+                    self.state['batch_end_frame'] = batch_end
+                    break
+
             # Calculate progress
-            batch_frames = self.state['batch_end_frame'] - self.state['batch_start_frame'] + 1
-            frames_done = frame - self.state['batch_start_frame'] + 1
+            batch_frames = batch_end - batch_start + 1
+            frames_done = frame - batch_start + 1
             batch_progress = int((frames_done / batch_frames) * 100) if batch_frames > 0 else 0
 
             # Calculate average frame time
@@ -338,6 +365,9 @@ class LogMonitor:
 
             self.callback({
                 'current_frame': frame,
+                'current_batch': self.state['current_batch'],
+                'batch_start_frame': batch_start,
+                'batch_end_frame': batch_end,
                 'batch_progress': batch_progress,
                 'avg_frame_time': avg_time,
                 'frame_time': frame_seconds
@@ -444,11 +474,11 @@ class LogMonitor:
                 completed_batches += 1
                 completed_frames += batch['frames']
                 completed_list.append(batch)
-            elif batch['priority'] == 'H':
+            elif batch['priority'] == '1':  # High priority
                 high_priority_pending += 1
                 high_priority_frames += batch['frames']
                 high_priority_list.append(batch)
-            else:  # 'L'
+            else:  # '0', 'null', or anything else = low priority
                 low_priority_pending += 1
                 low_priority_frames += batch['frames']
                 low_priority_list.append(batch)
