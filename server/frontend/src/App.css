@@ -18,10 +18,12 @@ body {
 
 .app {
   min-height: 100vh;
-  padding: 20px;
+  margin-left: 260px; /* Sidebar width */
+  padding: 40px;
   display: flex;
   justify-content: center;
   align-items: flex-start;
+  transition: margin-left 0.3s ease;
 }
 
 .container {
@@ -276,6 +278,12 @@ body {
 
 /* Responsive Design */
 @media (max-width: 768px) {
+  .app {
+    margin-left: 0;
+    padding: 90px 20px 20px 20px;
+    display: block;
+  }
+
   .grid-3 {
     grid-template-columns: 1fr;
   }

@@ -1,0 +1,20 @@
+{
+  "blender": {
+    "executable_path": "/Applications/Blender.app/Contents/MacOS/Blender",
+    "last_blend_file": "",
+    "recent_blend_files": []
+  },
+  "render": {
+    "last_project_name": "",
+    "default_output_dir": "./renders",
+    "last_batch_count": 0
+  },
+  "server": {
+    "default_port": 8081,
+    "host": "0.0.0.0"
+  },
+  "ui": {
+    "theme": "dark",
+    "auto_start_monitoring": true
+  }
+}

@@ -19,6 +19,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
 from monitor import LogMonitor
+from config_manager import get_config
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -186,6 +187,155 @@ async def websocket_endpoint(websocket: WebSocket):
 async def health_check():
     """Health check endpoint"""
     return {"status": "healthy", "version": "2.3.0"}
+
+
+@app.get("/api/config")
+async def get_configuration():
+    """Get current configuration"""
+    config = get_config()
+    return {
+        "status": "ok",
+        "config": config.get_all()
+    }
+
+
+@app.post("/api/config")
+async def update_configuration(updates: Dict[str, Any]):
+    """Update configuration settings"""
+    config = get_config()
+
+    # Update settings based on provided data
+    for key_path, value in updates.items():
+        keys = key_path.split('.')
+        config.set(*keys, value=value)
+
+    return {
+        "status": "ok",
+        "message": "Configuration updated",
+        "config": config.get_all()
+    }
+
+
+@app.get("/api/blend-files")
+async def get_blend_files():
+    """Get list of recent blend files and scan for available files"""
+    config = get_config()
+
+    # Get recent files from config
+    recent_files = config.get_recent_blend_files()
+    last_file = config.get_last_blend_file()
+
+    # TODO: Scan common directories for .blend files
+    # This could be enhanced to scan user's Documents, Desktop, etc.
+
+    return {
+        "status": "ok",
+        "recent_files": recent_files,
+        "last_file": last_file
+    }
+
+
+@app.post("/api/blend-files/add")
+async def add_blend_file(data: Dict[str, str]):
+    """Add a blend file to recent files"""
+    filepath = data.get('filepath', '')
+
+    if not filepath:
+        return {"status": "error", "message": "No filepath provided"}
+
+    config = get_config()
+    config.add_recent_blend_file(filepath)
+
+    return {
+        "status": "ok",
+        "message": "Blend file added to recent files",
+        "recent_files": config.get_recent_blend_files()
+    }
+
+
+@app.post("/api/render/start")
+async def start_render(render_config: Dict[str, Any]):
+    """
+    Start a new batch render job
+
+    Expected payload:
+    {
+        "projectName": "MyProject",
+        "blendFile": "/path/to/file.blend",
+        "batches": [...],
+        "totalBatches": 8,
+        "totalFrames": 500
+    }
+    """
+    try:
+        import subprocess
+        import time
+        from datetime import datetime
+
+        # Extract config
+        project_name = render_config.get('projectName', '')
+        blend_file = render_config.get('blendFile', '')
+        batches = render_config.get('batches', [])
+
+        if not project_name or not blend_file or not batches:
+            return {"status": "error", "message": "Missing required fields"}
+
+        # Generate timestamp
+        timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+
+        # Create output directory
+        output_dir = f"./renders/{project_name}_{timestamp}"
+        import os
+        os.makedirs(output_dir, exist_ok=True)
+
+        # Create log file path
+        log_file = f"{output_dir}/{project_name}_{timestamp}_render_log.txt"
+
+        # TODO: Start the actual batch render script in background
+        # For now, we'll just create a placeholder log file
+        with open(log_file, 'w') as f:
+            f.write(f"Render started at {timestamp}\n")
+            f.write(f"Project: {project_name}\n")
+            f.write(f"Blend file: {blend_file}\n")
+            f.write(f"Total batches: {len(batches)}\n")
+
+        # Save config
+        config = get_config()
+        config.add_recent_blend_file(blend_file)
+        config.update_render_settings(project_name, len(batches))
+
+        return {
+            "status": "ok",
+            "message": "Render job started",
+            "log_file": log_file,
+            "output_dir": output_dir
+        }
+
+    except Exception as e:
+        print(f"Error starting render: {e}")
+        import traceback
+        traceback.print_exc()
+        return {"status": "error", "message": str(e)}
+
+
+@app.post("/api/render/cancel")
+async def cancel_render():
+    """Cancel the current render job"""
+    try:
+        # TODO: Implement actual render cancellation
+        # This would need to:
+        # 1. Find the running Blender process
+        # 2. Send SIGTERM to gracefully stop it
+        # 3. Update render state
+
+        return {
+            "status": "ok",
+            "message": "Render job cancelled"
+        }
+
+    except Exception as e:
+        print(f"Error cancelling render: {e}")
+        return {"status": "error", "message": str(e)}
 
 
 # Server lifecycle events
