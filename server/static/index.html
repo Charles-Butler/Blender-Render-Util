@@ -221,6 +221,104 @@
         color: #991b1b;
       }
 
+      .priority-card {
+        text-align: left;
+        padding: 20px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .priority-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 16px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid rgba(0, 0, 0, 0.1);
+      }
+
+      .priority-icon {
+        font-size: 2rem;
+      }
+
+      .priority-header-text {
+        flex: 1;
+      }
+
+      .priority-label {
+        font-size: 0.9rem;
+        color: #6b7280;
+        font-weight: 600;
+        margin-bottom: 2px;
+      }
+
+      .priority-count {
+        font-size: 1.5rem;
+        font-weight: 700;
+        line-height: 1;
+      }
+
+      .priority-batch-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        max-height: 200px;
+        overflow-y: auto;
+      }
+
+      .priority-batch-item {
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        font-size: 0.85rem;
+      }
+
+      .priority-batch-item:last-child {
+        border-bottom: none;
+      }
+
+      .batch-item-name {
+        font-weight: 600;
+        color: #374151;
+        display: block;
+        margin-bottom: 2px;
+      }
+
+      .batch-item-details {
+        color: #6b7280;
+        font-size: 0.8rem;
+      }
+
+      .priority-empty {
+        text-align: center;
+        padding: 20px;
+        color: #9ca3af;
+        font-size: 0.85rem;
+      }
+
+      .priority-card.high-priority {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+      }
+
+      .priority-card.high-priority .priority-count {
+        color: #92400e;
+      }
+
+      .priority-card.low-priority {
+        background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+      }
+
+      .priority-card.low-priority .priority-count {
+        color: #3730a3;
+      }
+
+      .priority-card.completed {
+        background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+      }
+
+      .priority-card.completed .priority-count {
+        color: #065f46;
+      }
+
       @media (max-width: 768px) {
         .header h1 {
           font-size: 1.8rem;
@@ -306,6 +404,48 @@
             <div class="stat-label">✅ Frames Done</div>
             <div class="stat-value" id="framesCompleted">0</div>
           </div>
+        </div>
+      </div>
+
+      <!-- Priority Summary Cards -->
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 20px;">
+        <div class="card priority-card high-priority">
+          <div class="priority-header">
+            <div class="priority-icon">⚡</div>
+            <div class="priority-header-text">
+              <div class="priority-label">High Priority</div>
+              <div class="priority-count"><span id="highPriorityBatches">0</span> batches</div>
+            </div>
+          </div>
+          <ul class="priority-batch-list" id="highPriorityList">
+            <li class="priority-empty">No high priority batches</li>
+          </ul>
+        </div>
+
+        <div class="card priority-card low-priority">
+          <div class="priority-header">
+            <div class="priority-icon">📦</div>
+            <div class="priority-header-text">
+              <div class="priority-label">Low Priority</div>
+              <div class="priority-count"><span id="lowPriorityBatches">0</span> batches</div>
+            </div>
+          </div>
+          <ul class="priority-batch-list" id="lowPriorityList">
+            <li class="priority-empty">No low priority batches</li>
+          </ul>
+        </div>
+
+        <div class="card priority-card completed">
+          <div class="priority-header">
+            <div class="priority-icon">✅</div>
+            <div class="priority-header-text">
+              <div class="priority-label">Completed</div>
+              <div class="priority-count"><span id="completedBatches">0</span> batches</div>
+            </div>
+          </div>
+          <ul class="priority-batch-list" id="completedList">
+            <li class="priority-empty">No completed batches</li>
+          </ul>
         </div>
       </div>
 
@@ -447,6 +587,41 @@
             data.elapsed_time;
         }
 
+        // Update priority cards
+        if (data.high_priority_batches !== undefined) {
+          document.getElementById('highPriorityBatches').textContent =
+            data.high_priority_batches;
+          document.getElementById('highPriorityFrames').textContent =
+            data.high_priority_frames || 0;
+        }
+
+        if (data.low_priority_batches !== undefined) {
+          document.getElementById('lowPriorityBatches').textContent =
+            data.low_priority_batches;
+          document.getElementById('lowPriorityFrames').textContent =
+            data.low_priority_frames || 0;
+        }
+
+        if (data.completed_batches !== undefined) {
+          document.getElementById('completedBatches').textContent =
+            data.completed_batches;
+          document.getElementById('completedFrames').textContent =
+            data.completed_batch_frames || 0;
+        }
+
+        // Update batch lists
+        if (data.high_priority_list) {
+          updateBatchList('highPriorityList', data.high_priority_list, 'No high priority batches');
+        }
+
+        if (data.low_priority_list) {
+          updateBatchList('lowPriorityList', data.low_priority_list, 'No low priority batches');
+        }
+
+        if (data.completed_list) {
+          updateBatchList('completedList', data.completed_list, 'No completed batches');
+        }
+
         // Update errors
         if (data.errors && data.errors.length > 0) {
           document.getElementById('errorsCard').style.display = 'block';
@@ -464,6 +639,30 @@
         return `${mins.toString().padStart(2, '0')}:${secs
           .toString()
           .padStart(2, '0')}`;
+      }
+
+      function updateBatchList(listId, batches, emptyMessage) {
+        const listElement = document.getElementById(listId);
+
+        if (!batches || batches.length === 0) {
+          listElement.innerHTML = `<li class="priority-empty">${emptyMessage}</li>`;
+          return;
+        }
+
+        // Format: Batch {Name} 0000 - 0059 59frames
+        listElement.innerHTML = batches.map(batch => {
+          const startPadded = String(batch.start).padStart(4, '0');
+          const endPadded = String(batch.end).padStart(4, '0');
+          const frameCount = batch.frames;
+          const batchName = batch.name || `Batch ${batch.number}`;
+
+          return `
+            <li>
+              <div class="batch-item-name">${batchName}</div>
+              <div class="batch-item-details">${startPadded} - ${endPadded} • ${frameCount} frames</div>
+            </li>
+          `;
+        }).join('');
       }
 
       // Connect on page load
