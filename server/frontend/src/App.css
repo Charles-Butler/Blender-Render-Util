@@ -20,15 +20,13 @@ body {
   min-height: 100vh;
   margin-left: 260px; /* Sidebar width */
   padding: 40px;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
   transition: margin-left 0.3s ease;
 }
 
 .container {
   width: 100%;
-  max-width: 1000px;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 /* Header */
@@ -277,7 +275,7 @@ body {
 }
 
 /* Responsive Design */
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   .app {
     margin-left: 0;
     padding: 90px 20px 20px 20px;
