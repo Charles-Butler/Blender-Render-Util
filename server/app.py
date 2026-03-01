@@ -51,10 +51,12 @@ render_state: Dict[str, Any] = {
     "batch_progress": 0,
     "overall_progress": 0,
     "avg_frame_time": 0,
+    "frame_time": 0,
     "batch_eta": "00:00:00",
     "overall_eta": "00:00:00",
     "elapsed_time": "00:00:00",
-    "errors": []
+    "errors": [],
+    "start_time": None
 }
 
 # WebSocket connection manager
@@ -226,11 +228,64 @@ def update_render_state(updates: Dict[str, Any]):
     global render_state
     render_state.update(updates)
 
-    # Broadcast to all connected WebSocket clients
-    asyncio.create_task(manager.broadcast({
-        "type": "progress",
-        "data": render_state
-    }))
+    try:
+        # Calculate derived values
+        if render_state["batch_start_frame"] and render_state["batch_end_frame"] and render_state["current_frame"]:
+            # Batch progress
+            batch_frames = render_state["batch_end_frame"] - render_state["batch_start_frame"] + 1
+            if batch_frames > 0:
+                frames_done = render_state["current_frame"] - render_state["batch_start_frame"] + 1
+                render_state["batch_progress"] = int((frames_done / batch_frames) * 100)
+
+        # Overall progress
+        if render_state["total_frames"] > 0 and render_state["frames_completed"] > 0:
+            render_state["overall_progress"] = int((render_state["frames_completed"] / render_state["total_frames"]) * 100)
+
+        # Calculate ETAs if we have average frame time
+        if render_state.get("avg_frame_time", 0) > 0:
+            avg = render_state["avg_frame_time"]
+
+            # Batch ETA
+            if render_state["batch_end_frame"] and render_state["current_frame"]:
+                frames_left = max(0, render_state["batch_end_frame"] - render_state["current_frame"])
+                batch_eta_seconds = int(frames_left * avg)
+                render_state["batch_eta"] = seconds_to_time_str(batch_eta_seconds)
+
+            # Overall ETA
+            if render_state["total_frames"] > 0:
+                frames_left = max(0, render_state["total_frames"] - render_state["frames_completed"])
+                overall_eta_seconds = int(frames_left * avg)
+                render_state["overall_eta"] = seconds_to_time_str(overall_eta_seconds)
+
+        # Calculate elapsed time
+        if render_state.get("start_time"):
+            import time
+            elapsed = int(time.time() - render_state["start_time"])
+            render_state["elapsed_time"] = seconds_to_time_str(elapsed)
+
+    except Exception as e:
+        # Silently ignore calculation errors
+        pass
+
+    # Broadcast to all connected WebSocket clients (non-blocking)
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            asyncio.create_task(manager.broadcast({
+                "type": "progress",
+                "data": render_state
+            }))
+    except RuntimeError:
+        # No event loop running yet, skip broadcast
+        pass
+
+
+def seconds_to_time_str(seconds: int) -> str:
+    """Convert seconds to HH:MM:SS format"""
+    hours = seconds // 3600
+    minutes = (seconds % 3600) // 60
+    secs = seconds % 60
+    return f"{hours:02d}:{minutes:02d}:{secs:02d}"
 
 
 # Main entry point
@@ -242,6 +297,7 @@ def main():
     parser.add_argument("--host", type=str, default="0.0.0.0", help="Host to bind to")
     parser.add_argument("--project", type=str, help="Project name")
     parser.add_argument("--batches", type=int, help="Total number of batches")
+    parser.add_argument("--frames", type=int, help="Total number of frames")
 
     args = parser.parse_args()
 
@@ -250,6 +306,8 @@ def main():
         render_state["project_name"] = args.project
     if args.batches:
         render_state["total_batches"] = args.batches
+    if args.frames:
+        render_state["total_frames"] = args.frames
 
     # Initialize log monitor if logfile provided
     global monitor

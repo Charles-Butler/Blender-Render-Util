@@ -34,7 +34,9 @@ class LogMonitor:
         # Regex patterns for parsing Blender output
         self.patterns = {
             'batch_start': re.compile(r'Now Rendering Scenes:\s+(\d+)\s+-\s+(\d+)'),
+            'batch_name': re.compile(r'Batch:\s+(.+?)\s+\(\d+/\d+\)'),
             'batch_complete': re.compile(r'Finished Scenes:\s+(\d+)\s+-\s+(\d+)'),
+            'batch_priority': re.compile(r'\[Priority:\s*([HL])\]'),
             'frame_progress': re.compile(r'Fra:(\d+).*Time:([0-9:\.]+).*Remaining:([0-9:\.]+)'),
             'frame_saved': re.compile(r'Saved:.*\.(png|exr|jpg)'),
             'error': re.compile(r'^Error:'),
@@ -51,41 +53,47 @@ class LogMonitor:
             'frames_completed': 0,
             'last_frame_time': 0,
             'frame_times': [],
-            'errors': []
+            'errors': [],
+            'initial_scan_complete': False,
+            'batches': [],  # List of all batches: {start, end, priority, completed}
+            'current_batch_priority': None,
+            'current_batch_name': None
         }
 
     def start(self):
         """Start monitoring the log file"""
-        if not self.log_file.exists():
-            print(f"⚠️  Log file not found: {self.log_file}")
-            print(f"   Waiting for log file to be created...")
+        try:
+            if not self.log_file.exists():
+                print(f"⚠️  Log file not found: {self.log_file}")
+                # Don't wait, just return - file might be created later
+                return
 
-            # Wait for log file to be created
-            while not self.log_file.exists():
-                time.sleep(1)
+            self.running = True
 
-            print(f"✓ Log file created: {self.log_file}")
+            if WATCHDOG_AVAILABLE:
+                # Set up file watcher
+                self.file_handler = LogFileHandler(self.log_file, self.process_new_lines)
+                self.observer = Observer()
+                self.observer.schedule(
+                    self.file_handler,
+                    str(self.log_file.parent),
+                    recursive=False
+                )
+                self.observer.start()
+                print(f"📊 Monitoring log file (watchdog): {self.log_file}")
+            else:
+                # Use polling mode
+                print(f"📊 Monitoring log file (polling): {self.log_file}")
+                self._start_polling()
 
-        self.running = True
+            # Start initial file read
+            self._read_existing_content()
+            print(f"✓ Log monitor started successfully")
 
-        if WATCHDOG_AVAILABLE:
-            # Set up file watcher
-            self.file_handler = LogFileHandler(self.log_file, self.process_new_lines)
-            self.observer = Observer()
-            self.observer.schedule(
-                self.file_handler,
-                str(self.log_file.parent),
-                recursive=False
-            )
-            self.observer.start()
-            print(f"📊 Monitoring log file (watchdog): {self.log_file}")
-        else:
-            # Use polling mode
-            print(f"📊 Monitoring log file (polling): {self.log_file}")
-            self._start_polling()
-
-        # Start initial file read
-        self._read_existing_content()
+        except Exception as e:
+            print(f"❌ Error starting log monitor: {e}")
+            import traceback
+            traceback.print_exc()
 
     def _start_polling(self):
         """Start polling the log file for changes"""
@@ -108,6 +116,24 @@ class LogMonitor:
     def _read_existing_content(self):
         """Read any existing content in the log file"""
         try:
+            # Quick count of saved frames using grep (much faster for large files)
+            import subprocess
+            result = subprocess.run(
+                ['grep', '-c', 'Saved:', str(self.log_file)],
+                capture_output=True,
+                text=True
+            )
+
+            if result.returncode == 0:
+                saved_frame_count = int(result.stdout.strip())
+                self.state['frames_completed'] = saved_frame_count
+                if saved_frame_count > 0:
+                    self.callback({
+                        'frames_completed': saved_frame_count
+                    })
+                    print(f"✓ Found {saved_frame_count} completed frames in log")
+
+            # Parse the log to get current state
             with open(self.log_file, 'r') as f:
                 f.seek(self.last_position)
                 lines = f.readlines()
@@ -115,6 +141,9 @@ class LogMonitor:
 
                 for line in lines:
                     self.parse_line(line.strip())
+
+            # Mark initial scan complete
+            self.state['initial_scan_complete'] = True
 
         except Exception as e:
             print(f"Error reading log file: {e}")
@@ -138,6 +167,15 @@ class LogMonitor:
         if not line:
             return
 
+        # Check for batch name (appears after batch_start line)
+        name_match = self.patterns['batch_name'].search(line)
+        if name_match and self.state['batches']:
+            # Update the last batch with the name
+            batch_name = name_match.group(1).strip()
+            self.state['batches'][-1]['name'] = batch_name
+            self.state['current_batch_name'] = batch_name
+            return
+
         # Check for batch start
         match = self.patterns['batch_start'].search(line)
         if match:
@@ -147,13 +185,41 @@ class LogMonitor:
             self.state['batch_end_frame'] = end
             self.state['frame_times'] = []
 
+            # Check for priority in the line
+            priority_match = self.patterns['batch_priority'].search(line)
+            priority = priority_match.group(1) if priority_match else 'H'  # Default to High
+            self.state['current_batch_priority'] = priority
+
+            # Add batch to batches list (name will be added when we see the next line)
+            batch_info = {
+                'number': self.state['current_batch'],
+                'start': start,
+                'end': end,
+                'frames': end - start + 1,
+                'priority': priority,
+                'completed': False,
+                'name': f'Batch {self.state["current_batch"]}'  # Default name
+            }
+            self.state['batches'].append(batch_info)
+
+            # Set start time if this is the first batch
+            import time
+            if self.state['current_batch'] == 1:
+                self.callback({
+                    'start_time': time.time()
+                })
+
+            # Send batch stats update
+            self._send_batch_stats()
+
             self.callback({
                 'status': 'rendering',
                 'current_batch': self.state['current_batch'],
                 'batch_start_frame': start,
-                'batch_end_frame': end
+                'batch_end_frame': end,
+                'current_batch_priority': priority
             })
-            print(f"📊 Batch #{self.state['current_batch']}: Frames {start}-{end}")
+            print(f"📊 Batch #{self.state['current_batch']}: Frames {start}-{end} [Priority: {priority}]")
             return
 
         # Check for frame progress
@@ -185,9 +251,9 @@ class LogMonitor:
 
             return
 
-        # Check for frame saved
+        # Check for frame saved (only count new frames after initial scan)
         match = self.patterns['frame_saved'].search(line)
-        if match:
+        if match and self.state['initial_scan_complete']:
             self.state['frames_completed'] += 1
             self.callback({
                 'frames_completed': self.state['frames_completed']
@@ -198,6 +264,16 @@ class LogMonitor:
         match = self.patterns['batch_complete'].search(line)
         if match:
             start, end = int(match.group(1)), int(match.group(2))
+
+            # Mark current batch as completed
+            for batch in self.state['batches']:
+                if batch['start'] == start and batch['end'] == end:
+                    batch['completed'] = True
+                    break
+
+            # Send updated batch stats
+            self._send_batch_stats()
+
             print(f"✓ Batch #{self.state['current_batch']} completed: {start}-{end}")
             self.callback({
                 'batch_complete': True,
@@ -235,6 +311,46 @@ class LogMonitor:
             })
             print(f"❌ Memory error: {error_msg}")
             return
+
+    def _send_batch_stats(self):
+        """Calculate and send batch statistics by priority"""
+        high_priority_pending = 0
+        high_priority_frames = 0
+        low_priority_pending = 0
+        low_priority_frames = 0
+        completed_batches = 0
+        completed_frames = 0
+
+        # Separate batches by priority
+        high_priority_list = []
+        low_priority_list = []
+        completed_list = []
+
+        for batch in self.state['batches']:
+            if batch['completed']:
+                completed_batches += 1
+                completed_frames += batch['frames']
+                completed_list.append(batch)
+            elif batch['priority'] == 'H':
+                high_priority_pending += 1
+                high_priority_frames += batch['frames']
+                high_priority_list.append(batch)
+            else:  # 'L'
+                low_priority_pending += 1
+                low_priority_frames += batch['frames']
+                low_priority_list.append(batch)
+
+        self.callback({
+            'high_priority_batches': high_priority_pending,
+            'high_priority_frames': high_priority_frames,
+            'low_priority_batches': low_priority_pending,
+            'low_priority_frames': low_priority_frames,
+            'completed_batches': completed_batches,
+            'completed_batch_frames': completed_frames,
+            'high_priority_list': high_priority_list,
+            'low_priority_list': low_priority_list,
+            'completed_list': completed_list
+        })
 
     def _time_to_seconds(self, time_str: str) -> float:
         """Convert time string (HH:MM:SS.MS or MM:SS.MS) to seconds"""
