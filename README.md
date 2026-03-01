@@ -1,14 +1,41 @@
 # Blender Batch Render Utilities
 
-A set of Bash scripts for orchestrating and monitoring Blender batch rendering jobs with real-time progress tracking and ETA estimates.
+A comprehensive batch rendering system for Blender with real-time web-based monitoring, priority queue management, and accurate progress tracking.
 
 ## Overview
 
 These utilities streamline the Blender rendering workflow by providing:
-- **Automated batch rendering** with organized output
-- **Real-time progress monitoring** with visual progress bars
+- **Automated batch rendering** with priority-based queue management
+- **Real-time web dashboard** with live WebSocket updates
 - **Accurate time estimates** for batch and overall completion
-- **Error detection** and logging
+- **Multi-device monitoring** - view progress from any device on your network
+- **Error detection** and comprehensive logging
+
+---
+
+## Quick Start
+
+### 1. Start a Render Job
+```bash
+./batchedFrame_render.sh
+```
+
+### 2. Start the Web Monitoring Server
+```bash
+cd server
+python3 app.py --port 8081 --logfile /path/to/render_log.txt --project "ProjectName" --batches 8 --frames 527
+```
+
+### 3. Start the Frontend Dashboard
+```bash
+cd server/frontend
+npm install
+npm run dev -- --host 0.0.0.0
+```
+
+### 4. Access the Dashboard
+- **Local:** http://localhost:5173/
+- **Network:** http://YOUR_IP:5173/ (accessible from other devices)
 
 ---
 
@@ -43,7 +70,7 @@ Executes multiple Blender rendering batches with automatic logging and organizat
    - Start frame
    - End frame (inclusive)
    - Batch name (optional)
-   - Priority: H (High) or L (Low) - defaults to High
+   - Priority: 1 (High), 0 (Low), or skip for no priority
 3. Type `done` when finished adding batches
 4. Review sorted queue summary
 5. Confirm to start rendering
@@ -81,9 +108,65 @@ Start rendering? (Y/n): Y
 
 ---
 
-### 2. `watch_render_progress.sh` - Render Progress Monitor
+### 2. `server/app.py` - FastAPI Web Monitoring Server
 
-Real-time monitoring script that tracks rendering progress with visual feedback and time estimates.
+Real-time web server that provides REST API and WebSocket endpoints for monitoring render progress.
+
+**Features:**
+- RESTful API endpoints: `/api/status`, `/api/queue`, `/api/stats`
+- WebSocket endpoint: `/ws` for real-time updates
+- Automatic log file monitoring with efficient grep-based parsing
+- CORS enabled for frontend development
+- Health check endpoint: `/health`
+
+**Usage:**
+```bash
+python3 app.py --port 8081 \
+  --logfile /path/to/render_log.txt \
+  --project "ProjectName" \
+  --batches 8 \
+  --frames 527
+```
+
+**Arguments:**
+- `--logfile`: Path to the render log file
+- `--port`: Server port (default: 8080)
+- `--host`: Host to bind to (default: 0.0.0.0)
+- `--project`: Project name
+- `--batches`: Total number of batches
+- `--frames`: Total number of frames
+
+---
+
+### 3. `server/frontend/` - React Web Dashboard
+
+Modern web-based dashboard for monitoring render progress in real-time.
+
+**Features:**
+- Real-time WebSocket updates every 2 seconds
+- Responsive design (desktop and mobile)
+- Progress bars for overall and current batch
+- Statistics panel with ETA calculations
+- Priority-based batch lists (high/low/completed)
+- Connection status indicator
+
+**Development:**
+```bash
+cd server/frontend
+npm install
+npm run dev -- --host 0.0.0.0
+```
+
+**Production Build:**
+```bash
+npm run build
+```
+
+---
+
+### 4. `watch_render_progress.sh` - Terminal Progress Monitor (Legacy)
+
+Terminal-based monitoring script that tracks rendering progress with visual feedback.
 
 **Usage Options:**
 
@@ -142,7 +225,7 @@ The script will automatically detect running Blender processes and offer to moni
 - Batch configuration parsing from render script
 - Bash 3 compatibility for macOS
 
-### v2.3 - Interactive Batch Queue System *(Current)*
+### v2.3 - Interactive Batch Queue System
 - **Interactive Batch Input**: User defines frame ranges dynamically
   - Start/end frame validation
   - Optional batch naming
@@ -157,6 +240,41 @@ The script will automatically detect running Blender processes and offer to moni
   - Confirmation before rendering starts
 - **Path Validation**: Checks for Blender executable and .blend file before starting
 - **Error Resilience**: Captures exit codes and continues on batch failures
+
+### v3.0 - Web-Based Real-Time Monitoring System *(Current)*
+- **React-Based Web Dashboard**:
+  - Modern single-page application (SPA) with Vite + React
+  - Real-time updates via WebSocket
+  - Responsive design for desktop and mobile
+  - Centered layout with max-width 1000px container
+- **FastAPI Backend Server**:
+  - RESTful API endpoints for status, queue, and statistics
+  - WebSocket support for live progress updates
+  - Efficient log parsing with grep for large files (850K+ lines)
+  - Auto-detection of render start time from log filename
+- **Priority System Upgrade**:
+  - Numeric priority system: 1 (High), 0 (Low), null (No priority)
+  - Smart default behavior: batches without priority tagged as low priority
+  - Visual distinction in dashboard for high/low/completed batches
+- **Advanced Progress Tracking**:
+  - Overall progress (full-width display)
+  - Current batch progress with frame range detection
+  - Statistics panel: frame time, average time, batch ETA, overall ETA, elapsed time
+  - Real-time elapsed time calculation from render start timestamp
+- **Multi-Device Support**:
+  - Access dashboard from any device on local network
+  - Dynamic WebSocket connection based on hostname
+  - Network-accessible Vite dev server with `--host 0.0.0.0`
+- **Intelligent Log Monitoring**:
+  - Automatic timestamp parsing from log filename (YYYY-MM-DD_HH-MM-SS)
+  - Frame counting from "Append frame" lines (Blender 4.x)
+  - Batch detection from "Now Rendering Scenes" and "Finished Scenes" markers
+  - Priority tag parsing: `[Priority: 1]`, `[Priority: 0]`, or `[Priority: null]`
+- **Enhanced UI/UX**:
+  - Connection status indicator
+  - Gradient color-coded priority cards (yellow=high, blue=low, green=completed)
+  - Mobile-responsive with vertical stacking
+  - No scrollbars on batch lists for cleaner appearance
 
 ---
 
@@ -221,10 +339,21 @@ This optimization ensures:
 
 ## Requirements
 
+### Batch Rendering
 - **macOS** (Bash 3+ compatible)
 - **Blender** installed at `/Applications/Blender.app/`
 - **bc** (basic calculator - pre-installed on macOS)
-- **Terminal** with support for ANSI escape sequences
+
+### Web Monitoring Server
+- **Python 3.9+**
+- **FastAPI** - `pip install fastapi`
+- **Uvicorn** - `pip install uvicorn`
+- **WebSockets** - `pip install websockets`
+
+### Frontend Dashboard
+- **Node.js 16+**
+- **npm** (comes with Node.js)
+- **Vite** and **React** (installed via `npm install`)
 
 ---
 
@@ -349,9 +478,14 @@ git push origin develop
 - [ ] Support for multiple .blend files in one session
 - [ ] Save/load batch queue presets
 - [ ] Email/SMS notifications on completion
-- [ ] Web dashboard for remote monitoring
+- [x] ~~Web dashboard for remote monitoring~~ ✅ Completed in v3.0
 - [ ] GPU vs CPU render detection
 - [ ] Render farm distribution support
 - [ ] Resume failed batches from queue
 - [ ] Export queue summary as CSV/JSON
 - [ ] Parallel batch rendering support
+- [ ] Production build deployment for frontend
+- [ ] Authentication/password protection for web dashboard
+- [ ] Frame preview thumbnails in dashboard
+- [ ] Pause/resume batch rendering
+- [ ] Historical render statistics and analytics
