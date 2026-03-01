@@ -122,21 +122,22 @@ while true; do
 
     # Get priority
     while true; do
-        read -p "  Priority (H=High, L=Low) [H]: " PRIORITY_INPUT
+        read -p "  Priority (1=High, 0=Low, or press Enter to skip) [skip]: " PRIORITY_INPUT
 
-        # Default to High if empty
+        # If empty, set to null (no priority)
         if [ -z "$PRIORITY_INPUT" ]; then
-            PRIORITY_INPUT="H"
+            PRIORITY="null"
+            break
         fi
 
-        # Convert to uppercase
-        PRIORITY_INPUT=$(echo "$PRIORITY_INPUT" | tr '[:lower:]' '[:upper:]')
-
-        if [[ "$PRIORITY_INPUT" == "H" ]] || [[ "$PRIORITY_INPUT" == "L" ]]; then
-            PRIORITY=$PRIORITY_INPUT
+        if [[ "$PRIORITY_INPUT" == "1" ]]; then
+            PRIORITY="1"
+            break
+        elif [[ "$PRIORITY_INPUT" == "0" ]]; then
+            PRIORITY="0"
             break
         else
-            echo "  ⚠️  Invalid input. Please enter 'H' for High or 'L' for Low."
+            echo "  ⚠️  Invalid input. Please enter '1' for High, '0' for Low, or press Enter to skip."
         fi
     done
 
@@ -181,13 +182,17 @@ for ((i=0; i<${#SORT_INDICES[@]}; i++)); do
         frames_j=$((end_j - start_j + 1))
 
         # Swap if:
-        # 1. j has higher priority (H) than i (L), OR
+        # 1. j has higher priority (1 > 0 > null), OR
         # 2. Same priority but j has fewer frames
         SHOULD_SWAP=0
 
-        if [[ "$priority_i" == "L" ]] && [[ "$priority_j" == "H" ]]; then
+        # Convert priority to numeric for comparison: 1=3, 0=2, null=1
+        [[ "$priority_i" == "1" ]] && pri_val_i=3 || [[ "$priority_i" == "0" ]] && pri_val_i=2 || pri_val_i=1
+        [[ "$priority_j" == "1" ]] && pri_val_j=3 || [[ "$priority_j" == "0" ]] && pri_val_j=2 || pri_val_j=1
+
+        if [ $pri_val_j -gt $pri_val_i ]; then
             SHOULD_SWAP=1
-        elif [[ "$priority_i" == "$priority_j" ]] && [ $frames_j -lt $frames_i ]; then
+        elif [ $pri_val_j -eq $pri_val_i ] && [ $frames_j -lt $frames_i ]; then
             SHOULD_SWAP=1
         fi
 
