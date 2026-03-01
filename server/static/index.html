@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- Version: 2.3.1 - Batch Detail Lists -->
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -609,16 +610,16 @@
             data.completed_batch_frames || 0;
         }
 
-        // Update batch lists
-        if (data.high_priority_list) {
+        // Update batch lists (always update, even if empty)
+        if (data.high_priority_list !== undefined) {
           updateBatchList('highPriorityList', data.high_priority_list, 'No high priority batches');
         }
 
-        if (data.low_priority_list) {
+        if (data.low_priority_list !== undefined) {
           updateBatchList('lowPriorityList', data.low_priority_list, 'No low priority batches');
         }
 
-        if (data.completed_list) {
+        if (data.completed_list !== undefined) {
           updateBatchList('completedList', data.completed_list, 'No completed batches');
         }
 

@@ -39,6 +39,7 @@ class LogMonitor:
             'batch_priority': re.compile(r'\[Priority:\s*([HL])\]'),
             'frame_progress': re.compile(r'Fra:(\d+).*Time:([0-9:\.]+).*Remaining:([0-9:\.]+)'),
             'frame_saved': re.compile(r'Saved:.*\.(png|exr|jpg)'),
+            'frame_append': re.compile(r'Append frame (\d+)'),
             'error': re.compile(r'^Error:'),
             'texture_error': re.compile(r'Texture exceeds maximum'),
             'memory_error': re.compile(r'out of memory')
@@ -118,32 +119,101 @@ class LogMonitor:
         try:
             # Quick count of saved frames using grep (much faster for large files)
             import subprocess
+
+            # Try "Append frame" pattern first (newer Blender versions)
             result = subprocess.run(
-                ['grep', '-c', 'Saved:', str(self.log_file)],
+                ['grep', '-c', 'Append frame', str(self.log_file)],
                 capture_output=True,
                 text=True
             )
 
-            if result.returncode == 0:
+            saved_frame_count = 0
+            if result.returncode == 0 and result.stdout.strip():
                 saved_frame_count = int(result.stdout.strip())
+
+            # If no "Append frame" found, try "Saved:" pattern (older versions)
+            if saved_frame_count == 0:
+                result = subprocess.run(
+                    ['grep', '-c', 'Saved:', str(self.log_file)],
+                    capture_output=True,
+                    text=True
+                )
+                if result.returncode == 0 and result.stdout.strip():
+                    saved_frame_count = int(result.stdout.strip())
+
+            if saved_frame_count > 0:
                 self.state['frames_completed'] = saved_frame_count
-                if saved_frame_count > 0:
-                    self.callback({
-                        'frames_completed': saved_frame_count
-                    })
-                    print(f"✓ Found {saved_frame_count} completed frames in log")
+                self.callback({
+                    'frames_completed': saved_frame_count
+                })
+                print(f"✓ Found {saved_frame_count} completed frames in log")
 
-            # Parse the log to get current state
-            with open(self.log_file, 'r') as f:
-                f.seek(self.last_position)
-                lines = f.readlines()
-                self.last_position = f.tell()
+            # Use grep to quickly find batch starts and completions instead of parsing entire file
+            # This is much faster for large log files
+            batch_starts = subprocess.run(
+                ['grep', '-n', 'Now Rendering Scenes:', str(self.log_file)],
+                capture_output=True,
+                text=True
+            )
 
-                for line in lines:
-                    self.parse_line(line.strip())
+            batch_ends = subprocess.run(
+                ['grep', '-n', 'Finished Scenes:', str(self.log_file)],
+                capture_output=True,
+                text=True
+            )
+
+            # Parse batch starts
+            completed_ranges = set()
+            if batch_ends.returncode == 0:
+                for line in batch_ends.stdout.strip().split('\n'):
+                    if not line:
+                        continue
+                    # Extract frame range from "Finished Scenes: X - Y"
+                    match = self.patterns['batch_complete'].search(line)
+                    if match:
+                        start, end = int(match.group(1)), int(match.group(2))
+                        completed_ranges.add((start, end))
+
+            # Build batch list from starts
+            if batch_starts.returncode == 0:
+                for line_num, line in enumerate(batch_starts.stdout.strip().split('\n'), 1):
+                    if not line:
+                        continue
+                    # Extract frame range
+                    match = self.patterns['batch_start'].search(line)
+                    if match:
+                        start, end = int(match.group(1)), int(match.group(2))
+                        is_completed = (start, end) in completed_ranges
+
+                        batch_info = {
+                            'number': line_num,
+                            'start': start,
+                            'end': end,
+                            'frames': end - start + 1,
+                            'priority': 'H',  # Default to High (will be updated if we see priority markers)
+                            'completed': is_completed,
+                            'name': f'Batch {line_num}'
+                        }
+                        self.state['batches'].append(batch_info)
+                        self.state['current_batch'] = line_num
+
+                        if not is_completed:
+                            # This is the current rendering batch
+                            self.state['batch_start_frame'] = start
+                            self.state['batch_end_frame'] = end
+
+                # Send initial batch stats
+                if self.state['batches']:
+                    self._send_batch_stats()
+                    print(f"✓ Found {len(self.state['batches'])} batches ({len(completed_ranges)} completed)")
 
             # Mark initial scan complete
             self.state['initial_scan_complete'] = True
+
+            # Set file position to end so we only monitor new lines
+            with open(self.log_file, 'r') as f:
+                f.seek(0, 2)  # Seek to end
+                self.last_position = f.tell()
 
         except Exception as e:
             print(f"Error reading log file: {e}")
@@ -174,33 +244,57 @@ class LogMonitor:
             batch_name = name_match.group(1).strip()
             self.state['batches'][-1]['name'] = batch_name
             self.state['current_batch_name'] = batch_name
+
+            # Also check for priority on this line (in case it wasn't on the batch_start line)
+            priority_match = self.patterns['batch_priority'].search(line)
+            if priority_match:
+                priority = priority_match.group(1)
+                self.state['batches'][-1]['priority'] = priority
+                self.state['current_batch_priority'] = priority
+                # Re-send batch stats with updated priority
+                self._send_batch_stats()
+
             return
 
         # Check for batch start
         match = self.patterns['batch_start'].search(line)
         if match:
             start, end = int(match.group(1)), int(match.group(2))
-            self.state['current_batch'] += 1
-            self.state['batch_start_frame'] = start
-            self.state['batch_end_frame'] = end
-            self.state['frame_times'] = []
 
-            # Check for priority in the line
-            priority_match = self.patterns['batch_priority'].search(line)
-            priority = priority_match.group(1) if priority_match else 'H'  # Default to High
-            self.state['current_batch_priority'] = priority
+            # Check if this batch already exists (from initial scan)
+            batch_exists = False
+            for batch in self.state['batches']:
+                if batch['start'] == start and batch['end'] == end:
+                    batch_exists = True
+                    break
 
-            # Add batch to batches list (name will be added when we see the next line)
-            batch_info = {
-                'number': self.state['current_batch'],
-                'start': start,
-                'end': end,
-                'frames': end - start + 1,
-                'priority': priority,
-                'completed': False,
-                'name': f'Batch {self.state["current_batch"]}'  # Default name
-            }
-            self.state['batches'].append(batch_info)
+            if not batch_exists:
+                self.state['current_batch'] += 1
+                self.state['batch_start_frame'] = start
+                self.state['batch_end_frame'] = end
+                self.state['frame_times'] = []
+
+                # Check for priority in the line
+                priority_match = self.patterns['batch_priority'].search(line)
+                priority = priority_match.group(1) if priority_match else 'H'  # Default to High
+                self.state['current_batch_priority'] = priority
+
+                # Add batch to batches list (name will be added when we see the next line)
+                batch_info = {
+                    'number': self.state['current_batch'],
+                    'start': start,
+                    'end': end,
+                    'frames': end - start + 1,
+                    'priority': priority,
+                    'completed': False,
+                    'name': f'Batch {self.state["current_batch"]}'  # Default name
+                }
+                self.state['batches'].append(batch_info)
+            else:
+                # Update current batch tracking for existing batch
+                self.state['batch_start_frame'] = start
+                self.state['batch_end_frame'] = end
+                self.state['frame_times'] = []
 
             # Set start time if this is the first batch
             import time
@@ -253,6 +347,15 @@ class LogMonitor:
 
         # Check for frame saved (only count new frames after initial scan)
         match = self.patterns['frame_saved'].search(line)
+        if match and self.state['initial_scan_complete']:
+            self.state['frames_completed'] += 1
+            self.callback({
+                'frames_completed': self.state['frames_completed']
+            })
+            return
+
+        # Check for frame append (Blender 4.x format)
+        match = self.patterns['frame_append'].search(line)
         if match and self.state['initial_scan_complete']:
             self.state['frames_completed'] += 1
             self.callback({
@@ -326,7 +429,17 @@ class LogMonitor:
         low_priority_list = []
         completed_list = []
 
+        # Use set to track seen batches and avoid duplicates
+        seen_batches = set()
+
         for batch in self.state['batches']:
+            batch_key = (batch['start'], batch['end'])
+
+            # Skip duplicates
+            if batch_key in seen_batches:
+                continue
+            seen_batches.add(batch_key)
+
             if batch['completed']:
                 completed_batches += 1
                 completed_frames += batch['frames']
