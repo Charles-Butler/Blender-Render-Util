@@ -30,7 +30,10 @@ function App() {
     let reconnectTimeout = null
 
     const connect = () => {
-      ws = new WebSocket('ws://localhost:8081/ws')
+      // Use current hostname but port 8081 for WebSocket
+      const wsHost = window.location.hostname
+      const wsUrl = `ws://${wsHost}:8081/ws`
+      ws = new WebSocket(wsUrl)
 
       ws.onopen = () => {
         console.log('WebSocket connected')
@@ -78,6 +81,27 @@ function App() {
     const secs = Math.floor(seconds % 60)
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
   }
+
+  const formatElapsedTime = (startTime) => {
+    if (!startTime) return '00:00:00'
+    const elapsed = Math.floor(Date.now() / 1000 - startTime)
+    const hours = Math.floor(elapsed / 3600)
+    const mins = Math.floor((elapsed % 3600) / 60)
+    const secs = elapsed % 60
+    return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+  }
+
+  // Update elapsed time every second
+  const [elapsedTime, setElapsedTime] = useState('00:00:00')
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (renderState.start_time) {
+        setElapsedTime(formatElapsedTime(renderState.start_time))
+      }
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [renderState.start_time])
 
   return (
     <div className="app">
@@ -162,7 +186,7 @@ function App() {
             </div>
             <div className="stat-item">
               <div className="stat-label">🕐 Elapsed Time</div>
-              <div className="stat-value">{renderState.elapsed_time}</div>
+              <div className="stat-value">{elapsedTime}</div>
             </div>
             <div className="stat-item">
               <div className="stat-label">✅ Frames Done</div>
