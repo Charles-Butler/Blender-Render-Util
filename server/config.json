@@ -16,5 +16,8 @@
   "ui": {
     "theme": "dark",
     "auto_start_monitoring": true
+  },
+  "monitoring": {
+    "current_log_file": "/Users/me/Podcast/3D-Animation/Repos/Blender-Render-Util/renders/TOR_SpaceStation_2026-03-01_10-30-15/TOR_SpaceStation_2026-03-01_10-30-15_render_log.txt"
   }
 }

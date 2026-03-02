@@ -1,8 +1,66 @@
 import { useState, useEffect } from 'react'
 import '../App.css'
 
+function LogFilePicker({ onSelect, onClose }) {
+  const [logFiles, setLogFiles] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetchLogFiles()
+  }, [])
+
+  const fetchLogFiles = async () => {
+    try {
+      const response = await fetch('http://localhost:8081/api/browse-log-files')
+      const data = await response.json()
+
+      if (data.status === 'ok') {
+        setLogFiles(data.log_files || [])
+      }
+    } catch (error) {
+      console.error('Error fetching log files:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>Select Render to Monitor</h3>
+          <button className="modal-close" onClick={onClose}>×</button>
+        </div>
+        <div className="modal-body">
+          {loading ? (
+            <div className="loading">Loading log files...</div>
+          ) : logFiles.length > 0 ? (
+            <div className="log-file-list">
+              {logFiles.map((file, idx) => (
+                <div
+                  key={idx}
+                  className="log-file-item"
+                  onClick={() => onSelect(file.path)}
+                >
+                  <div className="log-file-name">{file.project_name}</div>
+                  <div className="log-file-date">{file.date}</div>
+                  <div className="log-file-path">{file.path}</div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="empty-state">No log files found in renders directory</div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function ProgressMonitor({ renderState, connected }) {
   const [elapsedTime, setElapsedTime] = useState('00:00:00')
+  const [currentLogFile, setCurrentLogFile] = useState('')
+  const [showFilePicker, setShowFilePicker] = useState(false)
 
   const formatSeconds = (seconds) => {
     if (!seconds) return '--:--'
@@ -23,24 +81,79 @@ function ProgressMonitor({ renderState, connected }) {
   // Update elapsed time every second
   useEffect(() => {
     const interval = setInterval(() => {
-      if (renderState.start_time) {
+      if (renderState.start_time && !renderState.end_time) {
+        // Only update if render is still active (no end_time)
         setElapsedTime(formatElapsedTime(renderState.start_time))
+      } else if (renderState.start_time && renderState.end_time) {
+        // Render completed, show final elapsed time
+        const finalElapsed = renderState.end_time - renderState.start_time
+        const hours = Math.floor(finalElapsed / 3600)
+        const mins = Math.floor((finalElapsed % 3600) / 60)
+        const secs = Math.floor(finalElapsed % 60)
+        setElapsedTime(`${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`)
       }
     }, 1000)
     return () => clearInterval(interval)
-  }, [renderState.start_time])
+  }, [renderState.start_time, renderState.end_time])
+
+  // Fetch current log file info
+  useEffect(() => {
+    fetchLogInfo()
+  }, [])
+
+  const fetchLogInfo = async () => {
+    try {
+      const response = await fetch('http://localhost:8081/api/status')
+      const data = await response.json()
+      if (data.status === 'ok' && data.render_state) {
+        // Try to get log file from render state or config
+        if (data.render_state.log_file) {
+          setCurrentLogFile(data.render_state.log_file)
+        } else {
+          // Fallback to config
+          const configResponse = await fetch('http://localhost:8081/api/config')
+          const configData = await configResponse.json()
+          if (configData.status === 'ok') {
+            setCurrentLogFile(configData.config?.monitoring?.current_log_file || 'Not monitoring')
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch log info:', error)
+      setCurrentLogFile('Not monitoring')
+    }
+  }
+
+  const handleSwitchLogFile = async (logFilePath) => {
+    try {
+      const response = await fetch('http://localhost:8081/api/monitor/override', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ logfile: logFilePath })
+      })
+
+      const data = await response.json()
+
+      if (data.status === 'ok') {
+        setCurrentLogFile(logFilePath)
+        setShowFilePicker(false)
+      } else {
+        alert(`Failed to switch log file: ${data.message}`)
+      }
+    } catch (error) {
+      console.error('Error switching log file:', error)
+      alert('Failed to switch log file. Check console for details.')
+    }
+  }
 
   return (
     <div className="progress-monitor">
       <div className="container">
-        {/* Project Header */}
-        <div className="monitor-header">
-          <div className="project-name">{renderState.project_name || 'Loading...'}</div>
-        </div>
-
         {/* 1. Overall Progress - Full Width */}
         <div className="card full-width">
-          <div className="card-title">🌍 Overall Progress</div>
+          <div className="card-title">
+            🌍 {renderState.project_name || 'Loading...'} - Overall Progress
+          </div>
           <div className="card-subtitle">
             {renderState.frames_completed} / {renderState.total_frames} frames
           </div>
@@ -191,7 +304,30 @@ function ProgressMonitor({ renderState, connected }) {
             </ul>
           </div>
         </div>
+
+        {/* Log File Info Section */}
+        <div className="card full-width log-info-section">
+          <div className="log-info-header">
+            <div className="log-label">📄 Currently Monitoring:</div>
+            <div className="log-path">
+              {currentLogFile}
+            </div>
+            <button
+              className="btn-override"
+              onClick={() => setShowFilePicker(true)}
+            >
+              Switch Render
+            </button>
+          </div>
+        </div>
       </div>
+
+      {showFilePicker && (
+        <LogFilePicker
+          onSelect={handleSwitchLogFile}
+          onClose={() => setShowFilePicker(false)}
+        />
+      )}
     </div>
   )
 }
