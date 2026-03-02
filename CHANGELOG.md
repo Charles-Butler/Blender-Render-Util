@@ -5,6 +5,83 @@ All notable changes to Blender Batch Render Utilities will be documented in this
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.0] - 2026-03-01
+
+### Added
+- **FontAwesome Icon System**
+  - Complete migration from emojis to FontAwesome solid icons (17 unique icons)
+  - Cross-platform consistency and professional appearance
+  - Improved icon sizing and alignment throughout UI
+  - Custom icon components with proper semantic meaning
+
+- **Custom Branding**
+  - Official Blender logo PNG (80x80px) in sidebar navigation
+  - Drop shadow effect for visual depth
+  - Replaced generic film icon with brand-specific imagery
+
+- **Animated Status Indicators**
+  - Rotating sync arrow (fa-arrows-rotate) during active renders (2s rotation cycle)
+  - Pulsing green dot indicator for "Rendering" state (1.5s fade cycle, opacity 1→0.3→1)
+  - Position-absolute pulse dot at far right of status container
+
+- **Enhanced Mobile Navigation**
+  - FontAwesome caret icons (fa-caret-left/right) for drawer toggle
+  - Sleek 50px × 100px touch-optimized tap target
+  - 16px rounded corners for modern appearance
+  - Enhanced hover effect with subtle slide-out animation (2px translateX)
+  - Active state with scale-down feedback (0.95)
+  - Deeper shadow (3px→12px blur) for better depth perception
+
+### Changed
+- **Icon Updates Across UI**
+  - Play button (fa-play) for Start Job instead of rocket
+  - Stop sign (fa-stop) for Cancel Job
+  - Level-down arrow (fa-level-down) for Low Priority batches
+  - List-alt (fa-list-alt) for Batch Queue
+  - Folder-open (fa-folder-open) for Project Settings and file operations
+  - Check-circle (fa-check-circle) for completed states
+  - Film (fa-film) for rendering/frame operations
+  - Clock (fa-clock) for time-related stats and pending status
+  - Bolt (fa-bolt) for High Priority batches
+  - File-lines (fa-file-lines) for log file monitoring
+
+- **Removed Elements**
+  - All emoji usage replaced with FontAwesome icons
+  - Target emoji (🎯) removed from "Render Order" heading
+  - Text-based `>` and `<` arrows replaced with proper caret icons
+
+---
+
+## [3.1.0] - 2026-03-01
+
+### Added
+- **Advanced Log File Management**
+  - Log file browser modal showing all renders in repository directory
+  - Switch between multiple concurrent renders without server restart
+  - External log file support via manual path entry
+  - Automatic project name extraction from log filename
+  - Real-time display of currently monitored log file path
+
+- **Improved Time Tracking**
+  - Elapsed time counter with automatic freeze on render completion
+  - End time detection when all batches complete
+  - Accurate final render duration display
+  - Timestamp preservation for completed renders
+
+- **Mobile Navigation Upgrade**
+  - Replaced hamburger menu with side tab toggle (space-saving design)
+  - Positioned at screen midpoint (50% vertical height)
+  - Smooth slide-in/out drawer animation
+  - Touch-optimized 40px × 80px tap target
+
+- **API Enhancements**
+  - `/api/browse-log-files` - Recursively scans renders directory
+  - `/api/monitor/override` - Updates project name when switching logs
+  - Sorted log file list by timestamp (newest first)
+  - Extracts project name and datetime from filenames
+
+---
+
 ## [3.0.0] - 2026-03-01
 
 ### Added
