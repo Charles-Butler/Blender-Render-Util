@@ -1,4 +1,9 @@
 import { useState, useEffect } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import {
+  faFolderOpen, faPlay, faStop, faCheckCircle,
+  faClock, faTrash, faFilm, faListAlt
+} from '@fortawesome/free-solid-svg-icons';
 import './ConfigureRender.css';
 
 function ConfigureRender({
@@ -205,7 +210,9 @@ function ConfigureRender({
         <div className='config-grid'>
           {/* Left: Project Settings */}
           <div className='config-section'>
-            <h3>📁 Project Settings</h3>
+            <h3>
+              <FontAwesomeIcon icon={faFolderOpen} /> Project Settings
+            </h3>
             <div className='form-group'>
               <label>Project Name</label>
               <input
@@ -245,14 +252,14 @@ function ConfigureRender({
                 onClick={handleStartRender}
                 disabled={batches.length === 0 || readOnly}
               >
-                🚀 Start Job
+                <FontAwesomeIcon icon={faPlay} /> Start Job
               </button>
               <button
                 className='btn-danger'
                 onClick={onCancelRender}
                 disabled={!readOnly}
               >
-                🛑 Cancel Job
+                <FontAwesomeIcon icon={faStop} /> Cancel Job
               </button>
             </div>
           </div>
@@ -260,7 +267,9 @@ function ConfigureRender({
           {/* Right: Frame Selection */}
           <div className='config-section'>
             <div className='section-header'>
-              <h3>🎬 Frame Selection</h3>
+              <h3>
+                <FontAwesomeIcon icon={faFilm} /> Frame Selection
+              </h3>
               {!readOnly && (
                 <div className='frame-selection-buttons'>
                   <button
@@ -344,7 +353,7 @@ function ConfigureRender({
             {/* Render Order Preview */}
             {batches.length > 0 && (
               <div className='render-order-preview'>
-                <h4>🎯 Render Order</h4>
+                <h4>Render Order</h4>
                 <div className='order-list'>
                   {getSortedBatches().map((batch, idx) => (
                     <div key={idx} className='order-item'>
@@ -378,7 +387,7 @@ function ConfigureRender({
         {/* Full Width Batch Queue Below */}
         <div className='config-section full-width-section'>
           <h3>
-            📋 Batch Queue ({batches.length} batches, {getTotalFrames()} frames)
+            <FontAwesomeIcon icon={faListAlt} /> Batch Queue ({batches.length} batches, {getTotalFrames()} frames)
           </h3>
 
           {batches.length > 0 && (
@@ -419,9 +428,21 @@ function ConfigureRender({
                           <span
                             className={`status-badge status-${batch.status}`}
                           >
-                            {batch.status === 'completed' && '✅ Completed'}
-                            {batch.status === 'rendering' && '🎬 Rendering'}
-                            {batch.status === 'pending' && '⏳ Pending'}
+                            {batch.status === 'completed' && (
+                              <>
+                                <FontAwesomeIcon icon={faCheckCircle} /> Completed
+                              </>
+                            )}
+                            {batch.status === 'rendering' && (
+                              <>
+                                <FontAwesomeIcon icon={faFilm} /> Rendering
+                              </>
+                            )}
+                            {batch.status === 'pending' && (
+                              <>
+                                <FontAwesomeIcon icon={faClock} /> Pending
+                              </>
+                            )}
                           </span>
                         </td>
                       )}
@@ -431,7 +452,7 @@ function ConfigureRender({
                             className='btn-remove'
                             onClick={() => handleRemoveBatch(idx)}
                           >
-                            🗑️
+                            <FontAwesomeIcon icon={faTrash} />
                           </button>
                         </td>
                       )}

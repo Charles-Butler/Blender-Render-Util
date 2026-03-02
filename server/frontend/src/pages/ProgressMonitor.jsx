@@ -1,4 +1,10 @@
 import { useState, useEffect } from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import {
+  faFolderOpen, faGlobe, faChartBar, faTriangleExclamation,
+  faChartLine, faStopwatch, faClock, faBolt, faLevelDown,
+  faCheckCircle, faFileLines
+} from '@fortawesome/free-solid-svg-icons'
 import '../App.css'
 
 function LogFilePicker({ onSelect, onClose }) {
@@ -62,7 +68,7 @@ function LogFilePicker({ onSelect, onClose }) {
         </div>
         <div className="modal-footer">
           <button className="btn-external" onClick={handleExternalFileSelect}>
-            📁 Select External Log File
+            <FontAwesomeIcon icon={faFolderOpen} /> Select External Log File
           </button>
         </div>
       </div>
@@ -165,7 +171,7 @@ function ProgressMonitor({ renderState, connected }) {
         {/* 1. Overall Progress - Full Width */}
         <div className="card full-width">
           <div className="card-title">
-            🌍 {renderState.project_name || 'Loading...'} - Overall Progress
+            <FontAwesomeIcon icon={faGlobe} /> {renderState.project_name || 'Loading...'} - Overall Progress
           </div>
           <div className="card-subtitle">
             {renderState.frames_completed} / {renderState.total_frames} frames
@@ -182,7 +188,9 @@ function ProgressMonitor({ renderState, connected }) {
 
         {/* 2. Current Batch Progress - Full Width */}
         <div className="card full-width">
-          <div className="card-title">📊 Current Batch Progress</div>
+          <div className="card-title">
+            <FontAwesomeIcon icon={faChartBar} /> Current Batch Progress
+          </div>
           <div className="card-subtitle">
             {renderState.current_batch > 0 ? (
               <>
@@ -204,37 +212,51 @@ function ProgressMonitor({ renderState, connected }) {
           </div>
           {renderState.batch_progress < 0 && (
             <div style={{ fontSize: '0.8rem', color: '#ef4444', marginTop: '8px' }}>
-              ⚠️ Frame {renderState.current_frame} outside batch range
+              <FontAwesomeIcon icon={faTriangleExclamation} /> Frame {renderState.current_frame} outside batch range
             </div>
           )}
         </div>
 
         {/* 3. Statistics - Full Width */}
         <div className="card full-width">
-          <div className="card-title">📈 Statistics</div>
+          <div className="card-title">
+            <FontAwesomeIcon icon={faChartLine} /> Statistics
+          </div>
           <div className="stats-grid">
             <div className="stat-item">
-              <div className="stat-label">⏱️ Frame Time</div>
+              <div className="stat-label">
+                <FontAwesomeIcon icon={faStopwatch} /> Frame Time
+              </div>
               <div className="stat-value">{formatSeconds(renderState.frame_time)}</div>
             </div>
             <div className="stat-item">
-              <div className="stat-label">📊 Avg/Frame</div>
+              <div className="stat-label">
+                <FontAwesomeIcon icon={faChartBar} /> Avg/Frame
+              </div>
               <div className="stat-value">{formatSeconds(renderState.avg_frame_time)}</div>
             </div>
             <div className="stat-item">
-              <div className="stat-label">⏳ Batch ETA</div>
+              <div className="stat-label">
+                <FontAwesomeIcon icon={faClock} /> Batch ETA
+              </div>
               <div className="stat-value">{renderState.batch_eta}</div>
             </div>
             <div className="stat-item">
-              <div className="stat-label">🌍 Overall ETA</div>
+              <div className="stat-label">
+                <FontAwesomeIcon icon={faGlobe} /> Overall ETA
+              </div>
               <div className="stat-value">{renderState.overall_eta}</div>
             </div>
             <div className="stat-item">
-              <div className="stat-label">🕐 Elapsed Time</div>
+              <div className="stat-label">
+                <FontAwesomeIcon icon={faClock} /> Elapsed Time
+              </div>
               <div className="stat-value">{elapsedTime}</div>
             </div>
             <div className="stat-item">
-              <div className="stat-label">✅ Frames Done</div>
+              <div className="stat-label">
+                <FontAwesomeIcon icon={faCheckCircle} /> Frames Done
+              </div>
               <div className="stat-value">{renderState.frames_completed}</div>
             </div>
           </div>
@@ -245,7 +267,9 @@ function ProgressMonitor({ renderState, connected }) {
           {/* High Priority */}
           <div className="card priority-card high-priority">
             <div className="priority-header">
-              <div className="priority-icon">⚡</div>
+              <div className="priority-icon">
+                <FontAwesomeIcon icon={faBolt} />
+              </div>
               <div className="priority-header-text">
                 <div className="priority-label">High Priority</div>
                 <div className="priority-count">{renderState.high_priority_batches} batches</div>
@@ -270,7 +294,9 @@ function ProgressMonitor({ renderState, connected }) {
           {/* Low Priority */}
           <div className="card priority-card low-priority">
             <div className="priority-header">
-              <div className="priority-icon">🔵</div>
+              <div className="priority-icon">
+                <FontAwesomeIcon icon={faLevelDown} />
+              </div>
               <div className="priority-header-text">
                 <div className="priority-label">Low Priority</div>
                 <div className="priority-count">{renderState.low_priority_batches} batches</div>
@@ -295,7 +321,9 @@ function ProgressMonitor({ renderState, connected }) {
           {/* Completed */}
           <div className="card priority-card completed">
             <div className="priority-header">
-              <div className="priority-icon">✅</div>
+              <div className="priority-icon">
+                <FontAwesomeIcon icon={faCheckCircle} />
+              </div>
               <div className="priority-header-text">
                 <div className="priority-label">Completed</div>
                 <div className="priority-count">{renderState.completed_batches} batches</div>
@@ -321,7 +349,9 @@ function ProgressMonitor({ renderState, connected }) {
         {/* Log File Info Section */}
         <div className="card full-width log-info-section">
           <div className="log-info-header">
-            <div className="log-label">📄 Currently Monitoring:</div>
+            <div className="log-label">
+              <FontAwesomeIcon icon={faFileLines} /> Currently Monitoring:
+            </div>
             <div className="log-path">
               {currentLogFile}
             </div>
