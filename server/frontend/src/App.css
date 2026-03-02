@@ -403,6 +403,15 @@ body {
   overflow-y: auto;
 }
 
+.modal-footer {
+  padding: 16px 24px;
+  border-top: 2px solid #e5e7eb;
+  display: flex;
+  justify-content: center;
+  background: #f9fafb;
+  border-radius: 0 0 12px 12px;
+}
+
 .log-file-list {
   display: flex;
   flex-direction: column;
@@ -450,6 +459,26 @@ body {
   padding: 40px;
   color: #6b7280;
   font-size: 1.1rem;
+}
+
+.btn-external {
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-external:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
 }
 
 /* Responsive Design */

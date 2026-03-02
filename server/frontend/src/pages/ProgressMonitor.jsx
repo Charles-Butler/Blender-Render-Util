@@ -4,6 +4,7 @@ import '../App.css'
 function LogFilePicker({ onSelect, onClose }) {
   const [logFiles, setLogFiles] = useState([])
   const [loading, setLoading] = useState(true)
+  const fileInputRef = useState(null)[0]
 
   useEffect(() => {
     fetchLogFiles()
@@ -21,6 +22,13 @@ function LogFilePicker({ onSelect, onClose }) {
       console.error('Error fetching log files:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleExternalFileSelect = () => {
+    const path = prompt('Enter the full path to the external log file:', '/Users/me/path/to/logfile.txt')
+    if (path && path.trim()) {
+      onSelect(path.trim())
     }
   }
 
@@ -51,6 +59,11 @@ function LogFilePicker({ onSelect, onClose }) {
           ) : (
             <div className="empty-state">No log files found in renders directory</div>
           )}
+        </div>
+        <div className="modal-footer">
+          <button className="btn-external" onClick={handleExternalFileSelect}>
+            📁 Select External Log File
+          </button>
         </div>
       </div>
     </div>

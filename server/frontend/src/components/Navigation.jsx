@@ -28,15 +28,13 @@ function Navigation({ currentPage, onNavigate, renderStatus, canNavigate }) {
 
   return (
     <>
-      {/* Mobile Hamburger Button */}
-      <button className="hamburger-button" onClick={toggleMenu} aria-label="Toggle menu">
-        <span className="hamburger-line"></span>
-        <span className="hamburger-line"></span>
-        <span className="hamburger-line"></span>
-      </button>
-
       {/* Sidebar Navigation */}
       <nav className={`navigation ${isOpen ? 'open' : ''}`}>
+        {/* Mobile Side Tab Toggle */}
+        <button className="side-tab-toggle" onClick={toggleMenu} aria-label="Toggle menu">
+          <span className="tab-arrow">{isOpen ? '<' : '>'}</span>
+        </button>
+
         {/* Overlay for mobile */}
         <div className="nav-overlay" onClick={() => setIsOpen(false)}></div>
 
@@ -80,7 +78,7 @@ function Navigation({ currentPage, onNavigate, renderStatus, canNavigate }) {
 
           {/* Version Footer */}
           <div className="nav-footer">
-            <div className="version-info">v3.0.0</div>
+            <div className="version-info">v3.1.0</div>
           </div>
         </div>
       </nav>
