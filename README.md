@@ -339,7 +339,7 @@ The script will automatically detect running Blender processes and offer to moni
   - Priority tag parsing: `[Priority: 1]` or `[Priority: null]`
   - Status tracking per batch: Pending → Rendering → Completed
 
-### v3.1 - Enhanced Monitoring & Mobile UX _(Current)_
+### v3.1 - Enhanced Monitoring & Mobile UX
 
 - **Advanced Log File Management**:
   - Log file browser modal showing all renders in repo directory
@@ -362,6 +362,38 @@ The script will automatically detect running Blender processes and offer to moni
   - `/api/monitor/override` - Updates project name when switching logs
   - Returns sorted list by timestamp (newest first)
   - Extracts project name and datetime from filenames
+
+### v3.2 - Professional Icon System & UI Polish _(Current)_
+
+- **FontAwesome Integration**:
+  - Complete migration from emojis to FontAwesome solid icons
+  - Cross-platform consistency and professional appearance
+  - 17 unique icons replaced across all components
+  - Improved icon sizing and alignment throughout UI
+- **Custom Branding**:
+  - Blender official logo PNG (80x80px) in sidebar navigation
+  - Drop shadow effect for logo depth
+  - Removed generic film icon
+- **Animated Status Indicators**:
+  - Rotating sync arrow (fa-arrows-rotate) during active renders (2s rotation)
+  - Pulsing green dot indicator for "Rendering" state (1.5s fade cycle)
+  - Position-absolute dot at far right of status container for visual separation
+- **Enhanced Mobile Tab**:
+  - FontAwesome caret icons (fa-caret-left/right) for open/close states
+  - Sleek 50px × 100px touch target with 16px rounded corners
+  - Enhanced hover effect with subtle slide-out animation (2px translateX)
+  - Active state with scale-down feedback (0.95)
+  - Deeper shadow for better depth perception
+- **Icon Updates**:
+  - Play button (fa-play) for Start Job instead of rocket
+  - Stop sign (fa-stop) for Cancel Job
+  - Level-down arrow (fa-level-down) for Low Priority batches
+  - List-alt (fa-list-alt) for Batch Queue
+  - Folder-open (fa-folder-open) for Project Settings and file operations
+  - Check-circle (fa-check-circle) for completed states
+  - Film (fa-film) for rendering/frame operations
+  - Clock (fa-clock) for time-related stats and pending status
+  - Removed target emoji from Render Order heading
 
 ---
 
