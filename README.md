@@ -293,7 +293,7 @@ The script will automatically detect running Blender processes and offer to moni
 - **Path Validation**: Checks for Blender executable and .blend file before starting
 - **Error Resilience**: Captures exit codes and continues on batch failures
 
-### v3.0 - Web-Based Configuration & Real-Time Monitoring System _(Current)_
+### v3.0 - Web-Based Configuration & Real-Time Monitoring System
 
 - **Two-Page React Application**:
   - **Configure Page**: Full batch render job setup interface
@@ -338,6 +338,30 @@ The script will automatically detect running Blender processes and offer to moni
   - Batch detection from "Now Rendering Scenes" and "Finished Scenes" markers
   - Priority tag parsing: `[Priority: 1]` or `[Priority: null]`
   - Status tracking per batch: Pending → Rendering → Completed
+
+### v3.1 - Enhanced Monitoring & Mobile UX _(Current)_
+
+- **Advanced Log File Management**:
+  - Log file browser modal showing all renders in repo directory
+  - Switch between multiple concurrent renders without restarting server
+  - External log file support via manual path entry
+  - Automatic project name extraction from log filename
+  - Real-time display of currently monitored log file path
+- **Improved Time Tracking**:
+  - Elapsed time counter with automatic freeze on render completion
+  - End time detection when all batches complete
+  - Accurate final render duration display
+- **Mobile Navigation Upgrade**:
+  - Replaced hamburger menu with side tab toggle (saves screen space)
+  - Tab shows `>` when closed, `<` when open
+  - Positioned at screen midpoint (50% height)
+  - Smooth slide-in/out drawer animation
+  - Touch-optimized 40px × 80px tap target
+- **API Enhancements**:
+  - `/api/browse-log-files` - Scans renders directory recursively
+  - `/api/monitor/override` - Updates project name when switching logs
+  - Returns sorted list by timestamp (newest first)
+  - Extracts project name and datetime from filenames
 
 ---
 
