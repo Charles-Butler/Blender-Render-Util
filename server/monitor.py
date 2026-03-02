@@ -419,14 +419,28 @@ class LogMonitor:
                     batch['completed'] = True
                     break
 
+            # Check if all batches are complete
+            all_complete = all(batch['completed'] for batch in self.state['batches'])
+
             # Send updated batch stats
             self._send_batch_stats()
 
             print(f"✓ Batch #{self.state['current_batch']} completed: {start}-{end}")
-            self.callback({
+
+            callback_data = {
                 'batch_complete': True,
                 'batch_number': self.state['current_batch']
-            })
+            }
+
+            # If all batches complete, set end_time and status
+            if all_complete:
+                import time
+                end_time = time.time()
+                callback_data['end_time'] = end_time
+                callback_data['status'] = 'completed'
+                print(f"✅ All batches completed!")
+
+            self.callback(callback_data)
             return
 
         # Check for errors

@@ -19,6 +19,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
 from monitor import LogMonitor
+from config_manager import get_config
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -38,6 +39,7 @@ app.add_middleware(
 
 # Global state
 monitor: Optional[LogMonitor] = None
+current_log_file: str = ""
 render_state: Dict[str, Any] = {
     "project_name": "",
     "status": "idle",
@@ -56,7 +58,9 @@ render_state: Dict[str, Any] = {
     "overall_eta": "00:00:00",
     "elapsed_time": "00:00:00",
     "errors": [],
-    "start_time": None
+    "start_time": None,
+    "end_time": None,
+    "log_file": ""
 }
 
 # WebSocket connection manager
@@ -186,6 +190,309 @@ async def websocket_endpoint(websocket: WebSocket):
 async def health_check():
     """Health check endpoint"""
     return {"status": "healthy", "version": "2.3.0"}
+
+
+@app.get("/api/config")
+async def get_configuration():
+    """Get current configuration"""
+    config = get_config()
+    return {
+        "status": "ok",
+        "config": config.get_all()
+    }
+
+
+@app.post("/api/config")
+async def update_configuration(updates: Dict[str, Any]):
+    """Update configuration settings"""
+    config = get_config()
+
+    # Update settings based on provided data
+    for key_path, value in updates.items():
+        keys = key_path.split('.')
+        config.set(*keys, value=value)
+
+    return {
+        "status": "ok",
+        "message": "Configuration updated",
+        "config": config.get_all()
+    }
+
+
+@app.get("/api/blend-files")
+async def get_blend_files():
+    """Get list of recent blend files and scan for available files"""
+    config = get_config()
+
+    # Get recent files from config
+    recent_files = config.get_recent_blend_files()
+    last_file = config.get_last_blend_file()
+
+    # TODO: Scan common directories for .blend files
+    # This could be enhanced to scan user's Documents, Desktop, etc.
+
+    return {
+        "status": "ok",
+        "recent_files": recent_files,
+        "last_file": last_file
+    }
+
+
+@app.post("/api/blend-files/add")
+async def add_blend_file(data: Dict[str, str]):
+    """Add a blend file to recent files"""
+    filepath = data.get('filepath', '')
+
+    if not filepath:
+        return {"status": "error", "message": "No filepath provided"}
+
+    config = get_config()
+    config.add_recent_blend_file(filepath)
+
+    return {
+        "status": "ok",
+        "message": "Blend file added to recent files",
+        "recent_files": config.get_recent_blend_files()
+    }
+
+
+@app.post("/api/render/start")
+async def start_render(render_config: Dict[str, Any]):
+    """
+    Start a new batch render job
+
+    Expected payload:
+    {
+        "projectName": "MyProject",
+        "blendFile": "/path/to/file.blend",
+        "batches": [...],
+        "totalBatches": 8,
+        "totalFrames": 500
+    }
+    """
+    try:
+        import subprocess
+        import time
+        from datetime import datetime
+
+        # Extract config
+        project_name = render_config.get('projectName', '')
+        blend_file = render_config.get('blendFile', '')
+        batches = render_config.get('batches', [])
+
+        if not project_name or not blend_file or not batches:
+            return {"status": "error", "message": "Missing required fields"}
+
+        # Generate timestamp
+        timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+
+        # Create output directory
+        output_dir = f"./renders/{project_name}_{timestamp}"
+        import os
+        os.makedirs(output_dir, exist_ok=True)
+
+        # Create log file path
+        log_file = f"{output_dir}/{project_name}_{timestamp}_render_log.txt"
+
+        # TODO: Start the actual batch render script in background
+        # For now, we'll just create a placeholder log file
+        with open(log_file, 'w') as f:
+            f.write(f"Render started at {timestamp}\n")
+            f.write(f"Project: {project_name}\n")
+            f.write(f"Blend file: {blend_file}\n")
+            f.write(f"Total batches: {len(batches)}\n")
+
+        # Save config
+        config = get_config()
+        config.add_recent_blend_file(blend_file)
+        config.update_render_settings(project_name, len(batches))
+
+        return {
+            "status": "ok",
+            "message": "Render job started",
+            "log_file": log_file,
+            "output_dir": output_dir
+        }
+
+    except Exception as e:
+        print(f"Error starting render: {e}")
+        import traceback
+        traceback.print_exc()
+        return {"status": "error", "message": str(e)}
+
+
+@app.post("/api/render/cancel")
+async def cancel_render():
+    """Cancel the current render job"""
+    try:
+        # TODO: Implement actual render cancellation
+        # This would need to:
+        # 1. Find the running Blender process
+        # 2. Send SIGTERM to gracefully stop it
+        # 3. Update render state
+
+        return {
+            "status": "ok",
+            "message": "Render job cancelled"
+        }
+
+    except Exception as e:
+        print(f"Error cancelling render: {e}")
+        return {"status": "error", "message": str(e)}
+
+
+@app.get("/api/browse-log-files")
+async def browse_log_files():
+    """Get list of available log files from renders directory"""
+    import glob
+    import re
+    from datetime import datetime
+
+    try:
+        # Look for log files in renders directory (relative to server dir)
+        renders_dir = Path(__file__).parent.parent / "renders"
+        print(f"🔍 Looking for renders in: {renders_dir.absolute()}")
+        print(f"🔍 Renders dir exists: {renders_dir.exists()}")
+
+        if not renders_dir.exists():
+            return {"status": "ok", "log_files": []}
+
+        log_files = []
+
+        # Find all render_log.txt files
+        for log_file in renders_dir.rglob("*_render_log.txt"):
+            print(f"📄 Found log file: {log_file}")
+            # Extract project name and timestamp from filename
+            filename = log_file.name
+            timestamp_match = re.search(r'(\d{4})-(\d{2})-(\d{2})_(\d{2})-(\d{2})-(\d{2})', filename)
+
+            if timestamp_match:
+                year, month, day, hour, minute, second = map(int, timestamp_match.groups())
+                dt = datetime(year, month, day, hour, minute, second)
+                date_str = dt.strftime('%Y-%m-%d %H:%M:%S')
+
+                # Extract project name (everything before the timestamp)
+                project_match = re.match(r'^(.+?)_\d{4}-\d{2}-\d{2}', filename)
+                project_name = project_match.group(1) if project_match else "Unknown Project"
+
+                log_files.append({
+                    "path": str(log_file.absolute()),
+                    "project_name": project_name,
+                    "date": date_str,
+                    "timestamp": dt.timestamp()
+                })
+
+        # Sort by timestamp (newest first)
+        log_files.sort(key=lambda x: x['timestamp'], reverse=True)
+
+        return {
+            "status": "ok",
+            "log_files": log_files
+        }
+
+    except Exception as e:
+        print(f"Error browsing log files: {e}")
+        import traceback
+        traceback.print_exc()
+        return {"status": "error", "message": str(e)}
+
+
+@app.post("/api/open-in-finder")
+async def open_in_finder(data: Dict[str, str]):
+    """Open a file or directory in Finder/Explorer"""
+    import subprocess
+    import platform
+
+    filepath = data.get('filepath', '')
+
+    if not filepath:
+        return {"status": "error", "message": "No filepath provided"}
+
+    # Get directory path
+    if os.path.isfile(filepath):
+        directory = os.path.dirname(filepath)
+    else:
+        directory = filepath
+
+    if not os.path.exists(directory):
+        return {"status": "error", "message": f"Path not found: {directory}"}
+
+    try:
+        system = platform.system()
+
+        if system == "Darwin":  # macOS
+            # Open Finder and select the file
+            subprocess.run(["open", "-R", filepath])
+        elif system == "Windows":
+            # Open Explorer and select the file
+            subprocess.run(["explorer", "/select,", filepath])
+        else:  # Linux
+            # Open file manager at directory
+            subprocess.run(["xdg-open", directory])
+
+        return {
+            "status": "ok",
+            "message": f"Opened in file manager: {directory}"
+        }
+
+    except Exception as e:
+        print(f"Error opening in file manager: {e}")
+        import traceback
+        traceback.print_exc()
+        return {"status": "error", "message": str(e)}
+
+
+@app.post("/api/monitor/override")
+async def override_log_file(data: Dict[str, str]):
+    """Override the current log file being monitored"""
+    global monitor, current_log_file, render_state
+
+    logfile = data.get('logfile', '')
+
+    if not logfile:
+        return {"status": "error", "message": "No logfile provided"}
+
+    # Check if file exists
+    if not os.path.exists(logfile):
+        return {"status": "error", "message": f"Log file not found: {logfile}"}
+
+    try:
+        # Stop current monitor if running
+        if monitor:
+            monitor.stop()
+
+        # Extract project name from log filename
+        import re
+        filename = Path(logfile).name
+        project_match = re.match(r'^(.+?)_\d{4}-\d{2}-\d{2}', filename)
+        project_name = project_match.group(1) if project_match else "Unknown Project"
+
+        # Start new monitor with new log file
+        print(f"📊 Switching to monitor log file: {logfile}")
+        print(f"📊 Project name: {project_name}")
+        monitor = LogMonitor(logfile, update_render_state)
+        monitor.start()
+
+        # Update global state
+        current_log_file = logfile
+        render_state["log_file"] = logfile
+        render_state["project_name"] = project_name
+
+        # Update config
+        config = get_config()
+        config.set('monitoring', 'current_log_file', value=logfile)
+
+        return {
+            "status": "ok",
+            "message": "Successfully switched to new log file",
+            "logfile": logfile
+        }
+
+    except Exception as e:
+        print(f"Error overriding log file: {e}")
+        import traceback
+        traceback.print_exc()
+        return {"status": "error", "message": str(e)}
 
 
 # Server lifecycle events
@@ -322,11 +629,19 @@ def main():
         render_state["total_frames"] = args.frames
 
     # Initialize log monitor if logfile provided
-    global monitor
+    global monitor, current_log_file
     if args.logfile:
         print(f"📊 Monitoring log file: {args.logfile}")
         monitor = LogMonitor(args.logfile, update_render_state)
         monitor.start()
+
+        # Update global state
+        current_log_file = args.logfile
+        render_state["log_file"] = args.logfile
+
+        # Save current log file to config
+        config = get_config()
+        config.set('monitoring', 'current_log_file', value=args.logfile)
 
     # Run server
     uvicorn.run(

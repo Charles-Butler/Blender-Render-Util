@@ -1,0 +1,23 @@
+{
+  "blender": {
+    "executable_path": "/Applications/Blender.app/Contents/MacOS/Blender",
+    "last_blend_file": "",
+    "recent_blend_files": []
+  },
+  "render": {
+    "last_project_name": "",
+    "default_output_dir": "./renders",
+    "last_batch_count": 0
+  },
+  "server": {
+    "default_port": 8081,
+    "host": "0.0.0.0"
+  },
+  "ui": {
+    "theme": "dark",
+    "auto_start_monitoring": true
+  },
+  "monitoring": {
+    "current_log_file": "/Users/me/Podcast/3D-Animation/Repos/renders/005_TOR_RER_2026-02-27_18-07-23/005_TOR_RER_2026-02-27_18-07-23_render_log.txt"
+  }
+}
