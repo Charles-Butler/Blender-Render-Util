@@ -1,12 +1,14 @@
 import { useState } from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faGear, faChartBar, faArrowsRotate, faCaretLeft, faCaretRight } from '@fortawesome/free-solid-svg-icons'
 import './Navigation.css'
 
 function Navigation({ currentPage, onNavigate, renderStatus, canNavigate }) {
   const [isOpen, setIsOpen] = useState(false)
 
   const pages = [
-    { id: 'configure', label: 'Configure', icon: '⚙️' },
-    { id: 'monitor', label: 'Monitor', icon: '📊' }
+    { id: 'configure', label: 'Configure', icon: faGear },
+    { id: 'monitor', label: 'Monitor', icon: faChartBar }
   ]
 
   const getPageStatus = (pageId) => {
@@ -32,7 +34,7 @@ function Navigation({ currentPage, onNavigate, renderStatus, canNavigate }) {
       <nav className={`navigation ${isOpen ? 'open' : ''}`}>
         {/* Mobile Side Tab Toggle */}
         <button className="side-tab-toggle" onClick={toggleMenu} aria-label="Toggle menu">
-          <span className="tab-arrow">{isOpen ? '<' : '>'}</span>
+          <FontAwesomeIcon icon={isOpen ? faCaretLeft : faCaretRight} className="tab-arrow" />
         </button>
 
         {/* Overlay for mobile */}
@@ -41,7 +43,9 @@ function Navigation({ currentPage, onNavigate, renderStatus, canNavigate }) {
         <div className="nav-content">
           {/* Brand */}
           <div className="nav-brand">
-            <div className="brand-icon">🎬</div>
+            <div className="brand-icon">
+              <img src="/blender_icon.png" alt="Blender" className="brand-logo" />
+            </div>
             <h1 className="brand-title">Blender Render Monitor</h1>
           </div>
 
@@ -54,7 +58,9 @@ function Navigation({ currentPage, onNavigate, renderStatus, canNavigate }) {
                 onClick={() => handleNavigate(page.id)}
                 disabled={!canNavigate && page.id !== currentPage}
               >
-                <span className="nav-icon">{page.icon}</span>
+                <span className="nav-icon">
+                  <FontAwesomeIcon icon={page.icon} />
+                </span>
                 <span className="nav-label">{page.label}</span>
               </button>
             ))}
@@ -65,10 +71,18 @@ function Navigation({ currentPage, onNavigate, renderStatus, canNavigate }) {
             <div className="nav-status">
               <div className="status-label">Status</div>
               <div className={`status-indicator ${renderStatus}`}>
-                <span className="status-dot"></span>
+                {renderStatus === 'rendering' ? (
+                  <FontAwesomeIcon icon={faArrowsRotate} className="status-icon rotating" />
+                ) : (
+                  <span className="status-dot"></span>
+                )}
                 <span className="status-text">
                   {renderStatus === 'idle' && 'Idle'}
-                  {renderStatus === 'rendering' && 'Rendering'}
+                  {renderStatus === 'rendering' && (
+                    <>
+                      Rendering<span className="pulse-dot"></span>
+                    </>
+                  )}
                   {renderStatus === 'completed' && 'Completed'}
                   {renderStatus === 'error' && 'Error'}
                 </span>
