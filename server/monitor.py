@@ -33,9 +33,9 @@ class LogMonitor:
 
         # Regex patterns for parsing Blender output
         self.patterns = {
-            'batch_start': re.compile(r'Now Rendering Scenes:\s+(\d+)\s+-\s+(\d+)'),
-            'batch_name': re.compile(r'Batch:\s+(.+?)\s+\(\d+/\d+\)'),
-            'batch_complete': re.compile(r'Finished Scenes:\s+(\d+)\s+-\s+(\d+)'),
+            'batch_start': re.compile(r'Now Rendering [^:]+:\s+(\d+)\s+-\s+(\d+)'),
+            'batch_name': re.compile(r'Now Rendering ([^:]+):\s+\d+\s+-\s+\d+'),
+            'batch_complete': re.compile(r'Finished [^:]+:\s+(\d+)\s+-\s+(\d+)'),
             'batch_priority': re.compile(r'\[Priority:\s*([01HL]|null)\]'),
             'frame_progress': re.compile(r'Fra:(\d+).*Time:([0-9:\.]+).*Remaining:([0-9:\.]+)'),
             'frame_saved': re.compile(r'Saved:.*\.(png|exr|jpg)'),
@@ -152,13 +152,13 @@ class LogMonitor:
             # Use grep to quickly find batch starts and completions instead of parsing entire file
             # This is much faster for large log files
             batch_starts = subprocess.run(
-                ['grep', '-n', 'Now Rendering Scenes:', str(self.log_file)],
+                ['grep', '-n', 'Now Rendering', str(self.log_file)],
                 capture_output=True,
                 text=True
             )
 
             batch_ends = subprocess.run(
-                ['grep', '-n', 'Finished Scenes:', str(self.log_file)],
+                ['grep', '-n', 'Finished', str(self.log_file)],
                 capture_output=True,
                 text=True
             )
@@ -186,6 +186,10 @@ class LogMonitor:
                         start, end = int(match.group(1)), int(match.group(2))
                         is_completed = (start, end) in completed_ranges
 
+                        # Extract batch name from the same line
+                        name_match = self.patterns['batch_name'].search(line)
+                        batch_name = name_match.group(1).strip() if name_match else f'Batch {line_num}'
+
                         batch_info = {
                             'number': line_num,
                             'start': start,
@@ -193,7 +197,7 @@ class LogMonitor:
                             'frames': end - start + 1,
                             'priority': '1',  # Default to high priority (will be updated if we see priority markers)
                             'completed': is_completed,
-                            'name': f'Batch {line_num}'
+                            'name': batch_name
                         }
                         self.state['batches'].append(batch_info)
                         self.state['current_batch'] = line_num
@@ -284,29 +288,38 @@ class LogMonitor:
         if match:
             start, end = int(match.group(1)), int(match.group(2))
 
+            # Extract batch name from the same line
+            name_match = self.patterns['batch_name'].search(line)
+            batch_name = name_match.group(1).strip() if name_match else f'Batch {self.state["current_batch"] + 1}'
+
             # Check if this batch already exists (from initial scan)
             batch_exists = False
+            existing_batch = None
             for batch in self.state['batches']:
                 if batch['start'] == start and batch['end'] == end:
                     batch_exists = True
+                    existing_batch = batch
+                    # Update the name if we didn't have it before
+                    if batch['name'].startswith('Batch '):
+                        batch['name'] = batch_name
                     break
+
+            # Check for priority in the line
+            priority_match = self.patterns['batch_priority'].search(line)
+            if priority_match:
+                priority_raw = priority_match.group(1)
+                priority = '1' if priority_raw in ('1', 'H') else '0'
+            else:
+                priority = '0'  # Default to low priority (no priority set)
 
             if not batch_exists:
                 self.state['current_batch'] += 1
                 self.state['batch_start_frame'] = start
                 self.state['batch_end_frame'] = end
                 self.state['frame_times'] = []
-
-                # Check for priority in the line
-                priority_match = self.patterns['batch_priority'].search(line)
-                if priority_match:
-                    priority_raw = priority_match.group(1)
-                    priority = '1' if priority_raw in ('1', 'H') else '0'
-                else:
-                    priority = '0'  # Default to low priority (no priority set)
                 self.state['current_batch_priority'] = priority
 
-                # Add batch to batches list (name will be added when we see the next line)
+                # Add batch to batches list with the extracted name
                 batch_info = {
                     'number': self.state['current_batch'],
                     'start': start,
@@ -314,14 +327,17 @@ class LogMonitor:
                     'frames': end - start + 1,
                     'priority': priority,
                     'completed': False,
-                    'name': f'Batch {self.state["current_batch"]}'  # Default name
+                    'name': batch_name
                 }
                 self.state['batches'].append(batch_info)
             else:
                 # Update current batch tracking for existing batch
+                # Set current_batch to the existing batch's number
+                self.state['current_batch'] = existing_batch['number']
                 self.state['batch_start_frame'] = start
                 self.state['batch_end_frame'] = end
                 self.state['frame_times'] = []
+                self.state['current_batch_priority'] = existing_batch.get('priority', priority)
 
             # Set start time if this is the first batch
             import time

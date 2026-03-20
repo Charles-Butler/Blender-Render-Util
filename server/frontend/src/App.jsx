@@ -8,6 +8,7 @@ function App() {
   const [currentPage, setCurrentPage] = useState('configure')
   const [connected, setConnected] = useState(false)
   const [renderConfig, setRenderConfig] = useState(null)
+  const [isStartingRender, setIsStartingRender] = useState(false)
   const [renderState, setRenderState] = useState({
     project_name: '',
     status: 'idle',
@@ -29,6 +30,14 @@ function App() {
     overall_eta: '00:00:00',
     elapsed_time: '00:00:00'
   })
+
+  // Redirect from monitor to configure when status becomes idle
+  useEffect(() => {
+    if (currentPage === 'monitor' && renderState.status === 'idle') {
+      console.log('Status is idle, redirecting to configure page')
+      setCurrentPage('configure')
+    }
+  }, [currentPage, renderState.status])
 
   useEffect(() => {
     let ws = null
@@ -90,6 +99,7 @@ function App() {
   const handleStartRender = async (config) => {
     console.log('Starting render with config:', config)
     setRenderConfig(config)
+    setIsStartingRender(true)
 
     try {
       // Call backend API to start render
@@ -102,13 +112,21 @@ function App() {
       const data = await response.json()
 
       if (data.status === 'ok') {
-        // Switch to monitor page
-        setCurrentPage('monitor')
-        console.log('Render started successfully')
+        console.log('Render started successfully. Waiting 5 seconds for log file generation...')
+
+        // Wait 5 seconds for the bash script to create the log file
+        // before switching to monitor page
+        setTimeout(() => {
+          setIsStartingRender(false)
+          setCurrentPage('monitor')
+          console.log('Switched to monitor page')
+        }, 5000)
       } else {
+        setIsStartingRender(false)
         alert(`Failed to start render: ${data.message}`)
       }
     } catch (error) {
+      setIsStartingRender(false)
       console.error('Error starting render:', error)
       alert('Failed to start render. Check console for details.')
     }
@@ -161,6 +179,7 @@ function App() {
           readOnly={renderState.status === 'rendering'}
           onCancelRender={handleCancelRender}
           renderState={renderState}
+          isStartingRender={isStartingRender}
         />
       )}
 

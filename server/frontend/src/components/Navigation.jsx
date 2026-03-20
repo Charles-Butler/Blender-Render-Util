@@ -13,12 +13,23 @@ function Navigation({ currentPage, onNavigate, renderStatus, canNavigate }) {
 
   const getPageStatus = (pageId) => {
     if (pageId === currentPage) return 'active'
+
+    // Monitor tab is disabled when status is idle
+    if (pageId === 'monitor' && renderStatus === 'idle') return 'disabled'
+
     if (!canNavigate) return 'disabled'
     return ''
   }
 
+  const isPageDisabled = (pageId) => {
+    // Monitor tab is disabled when status is idle
+    if (pageId === 'monitor' && renderStatus === 'idle') return true
+
+    return !canNavigate && pageId !== currentPage
+  }
+
   const handleNavigate = (pageId) => {
-    if (canNavigate) {
+    if (!isPageDisabled(pageId)) {
       onNavigate(pageId)
       setIsOpen(false) // Close mobile menu after navigation
     }
@@ -56,7 +67,8 @@ function Navigation({ currentPage, onNavigate, renderStatus, canNavigate }) {
                 key={page.id}
                 className={`nav-item ${getPageStatus(page.id)}`}
                 onClick={() => handleNavigate(page.id)}
-                disabled={!canNavigate && page.id !== currentPage}
+                disabled={isPageDisabled(page.id)}
+                title={page.id === 'monitor' && renderStatus === 'idle' ? 'Start a render to access Monitor' : ''}
               >
                 <span className="nav-icon">
                   <FontAwesomeIcon icon={page.icon} />
@@ -92,7 +104,7 @@ function Navigation({ currentPage, onNavigate, renderStatus, canNavigate }) {
 
           {/* Version Footer */}
           <div className="nav-footer">
-            <div className="version-info">v3.2.0</div>
+            <div className="version-info">v4.0.0</div>
           </div>
         </div>
       </nav>

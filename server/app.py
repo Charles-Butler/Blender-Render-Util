@@ -60,7 +60,9 @@ render_state: Dict[str, Any] = {
     "errors": [],
     "start_time": None,
     "end_time": None,
-    "log_file": ""
+    "log_file": "",
+    "configured_batches": [],  # All batches that were configured for this render
+    "batches": []  # Batches detected from log (will be merged with configured_batches)
 }
 
 # WebSocket connection manager
@@ -202,6 +204,17 @@ async def get_configuration():
     }
 
 
+@app.get("/api/current-render")
+async def get_current_render():
+    """Get current render configuration from config.json (static data - faster than memory)"""
+    config = get_config()
+    current_render = config.get_current_render()
+    return {
+        "status": "ok",
+        "current_render": current_render
+    }
+
+
 @app.post("/api/config")
 async def update_configuration(updates: Dict[str, Any]):
     """Update configuration settings"""
@@ -217,6 +230,75 @@ async def update_configuration(updates: Dict[str, Any]):
         "message": "Configuration updated",
         "config": config.get_all()
     }
+
+
+@app.get("/api/batch-profiles")
+async def get_batch_profiles():
+    """Get all saved batch profiles"""
+    config = get_config()
+    profiles = config.get_all_batch_profiles()
+
+    return {
+        "status": "ok",
+        "profiles": profiles
+    }
+
+
+@app.get("/api/batch-profiles/{profile_name}")
+async def get_batch_profile(profile_name: str):
+    """Get a specific batch profile"""
+    config = get_config()
+    profile = config.get_batch_profile(profile_name)
+
+    if profile:
+        return {
+            "status": "ok",
+            "profile": profile
+        }
+    else:
+        return {
+            "status": "error",
+            "message": f"Profile '{profile_name}' not found"
+        }
+
+
+@app.post("/api/batch-profiles")
+async def save_batch_profile(data: Dict[str, Any]):
+    """Save a batch profile"""
+    profile_name = data.get('name', '')
+    batches = data.get('batches', [])
+
+    if not profile_name or not batches:
+        return {
+            "status": "error",
+            "message": "Profile name and batches are required"
+        }
+
+    config = get_config()
+    config.save_batch_profile(profile_name, batches)
+
+    return {
+        "status": "ok",
+        "message": f"Profile '{profile_name}' saved successfully"
+    }
+
+
+@app.delete("/api/batch-profiles/{profile_name}")
+async def delete_batch_profile(profile_name: str):
+    """Delete a batch profile"""
+    config = get_config()
+    success = config.delete_batch_profile(profile_name)
+
+    if success:
+        return {
+            "status": "ok",
+            "message": f"Profile '{profile_name}' deleted"
+        }
+    else:
+        return {
+            "status": "error",
+            "message": f"Profile '{profile_name}' not found"
+        }
 
 
 @app.get("/api/blend-files")
@@ -256,6 +338,50 @@ async def add_blend_file(data: Dict[str, str]):
     }
 
 
+@app.get("/api/blend-files/browse")
+async def browse_blend_files(directory: Optional[str] = None):
+    """
+    Browse for .blend files in a directory
+
+    Args:
+        directory: Directory to scan (defaults to common Blender directories)
+    """
+    import glob
+
+    blend_files = []
+
+    if directory:
+        # Scan specified directory
+        pattern = f"{directory}/**/*.blend"
+        blend_files = glob.glob(pattern, recursive=True)
+    else:
+        # Scan common directories
+        common_dirs = [
+            "/Users/me/Podcast/3D-Animation/WIP - Blender",
+            "/Users/me/Podcast/3D-Animation/Scenes",
+            str(Path.home() / "Documents"),
+            str(Path.home() / "Desktop")
+        ]
+
+        for dir_path in common_dirs:
+            if Path(dir_path).exists():
+                pattern = f"{dir_path}/**/*.blend"
+                found = glob.glob(pattern, recursive=True)
+                blend_files.extend(found)
+
+    # Sort by modification time (most recent first)
+    blend_files.sort(key=lambda x: Path(x).stat().st_mtime if Path(x).exists() else 0, reverse=True)
+
+    # Limit to 50 most recent
+    blend_files = blend_files[:50]
+
+    return {
+        "status": "ok",
+        "blend_files": blend_files,
+        "count": len(blend_files)
+    }
+
+
 @app.post("/api/render/start")
 async def start_render(render_config: Dict[str, Any]):
     """
@@ -273,6 +399,8 @@ async def start_render(render_config: Dict[str, Any]):
     try:
         import subprocess
         import time
+        import json
+        import tempfile
         from datetime import datetime
 
         # Extract config
@@ -283,35 +411,152 @@ async def start_render(render_config: Dict[str, Any]):
         if not project_name or not blend_file or not batches:
             return {"status": "error", "message": "Missing required fields"}
 
+        # Verify blend file exists
+        if not os.path.exists(blend_file):
+            return {"status": "error", "message": f"Blend file not found: {blend_file}"}
+
         # Generate timestamp
         timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 
-        # Create output directory
-        output_dir = f"./renders/{project_name}_{timestamp}"
-        import os
-        os.makedirs(output_dir, exist_ok=True)
+        # Create output directory (relative to parent of server dir)
+        renders_dir = Path(__file__).parent.parent / "renders"
+        renders_dir.mkdir(exist_ok=True)
+
+        output_dir = renders_dir / f"{project_name}_{timestamp}"
+        output_dir.mkdir(exist_ok=True)
 
         # Create log file path
-        log_file = f"{output_dir}/{project_name}_{timestamp}_render_log.txt"
+        log_file = output_dir / f"{project_name}_{timestamp}_render_log.txt"
 
-        # TODO: Start the actual batch render script in background
-        # For now, we'll just create a placeholder log file
-        with open(log_file, 'w') as f:
-            f.write(f"Render started at {timestamp}\n")
-            f.write(f"Project: {project_name}\n")
-            f.write(f"Blend file: {blend_file}\n")
-            f.write(f"Total batches: {len(batches)}\n")
+        # Create a temporary JSON config file for the bash script to read
+        config_data = {
+            "project_name": project_name,
+            "blend_file": blend_file,
+            "batches": batches,
+            "output_dir": str(output_dir),
+            "log_file": str(log_file),
+            "timestamp": timestamp
+        }
+
+        # Write config to temp file
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as temp_config:
+            json.dump(config_data, temp_config, indent=2)
+            temp_config_path = temp_config.name
+
+        print(f"✓ Created render config at: {temp_config_path}")
+        print(f"✓ Config: {json.dumps(config_data, indent=2)}")
+
+        # Path to the render script (in Blender-Utilities repo)
+        script_dir = Path(__file__).parent.parent.parent / "Blender-Utilities"
+        render_script = script_dir / "batchedFrame_render.sh"
+
+        if not render_script.exists():
+            os.unlink(temp_config_path)  # Clean up temp file
+            return {"status": "error", "message": f"Render script not found at: {render_script}"}
+
+        # Build the AppleScript command to open Terminal and run the script
+        applescript = f'''
+        tell application "Terminal"
+            activate
+            do script "cd '{script_dir}' && export RENDER_CONFIG_FILE='{temp_config_path}' && ./batchedFrame_render.sh; echo '\\nPress any key to close this window...'; read -n 1; exit"
+        end tell
+        '''
+
+        # Launch Terminal with the render script
+        subprocess.Popen(
+            ['osascript', '-e', applescript],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
+
+        print(f"✓ Launched render in Terminal")
+        print(f"✓ Log file will be at: {log_file}")
+
+        # Calculate total frames
+        total_frames = sum(batch['end'] - batch['start'] + 1 for batch in batches)
+
+        # Transform batches to include status tracking
+        configured_batches = []
+        for idx, batch in enumerate(batches, 1):
+            configured_batches.append({
+                'number': idx,
+                'name': batch.get('name', f'Batch {idx}'),
+                'start': batch['start'],
+                'end': batch['end'],
+                'frames': batch['end'] - batch['start'] + 1,
+                'priority': batch.get('priority', '0'),
+                'completed': False,
+                'rendering': False
+            })
 
         # Save config
         config = get_config()
         config.add_recent_blend_file(blend_file)
         config.update_render_settings(project_name, len(batches))
 
+        # Save batch profile as "last" for easy reload
+        config.save_batch_profile('last', batches)
+
+        # Save to current_render in config.json (static data - faster than memory)
+        config.update_current_render({
+            'project_name': project_name,
+            'blend_file': blend_file,
+            'log_file': str(log_file),
+            'output_dir': str(output_dir),
+            'timestamp': timestamp,
+            'configured_batches': configured_batches,
+            'total_frames': total_frames,
+            'status': 'rendering'
+        })
+
+        # Also save to monitoring.active_render for backwards compatibility
+        config.save_active_render({
+            'project_name': project_name,
+            'blend_file': blend_file,
+            'log_file': str(log_file),
+            'output_dir': str(output_dir),
+            'timestamp': timestamp,
+            'configured_batches': configured_batches,
+            'total_frames': total_frames,
+            'status': 'rendering'
+        })
+
+        # Start monitoring the log file
+        global monitor, current_log_file
+        current_log_file = str(log_file)
+
+        # Give the script time to create the log file (5 seconds)
+        # This matches the frontend delay before switching to monitor page
+        print("⏳ Waiting 5 seconds for log file generation...")
+        await asyncio.sleep(5)
+
+        if monitor:
+            monitor.stop()
+
+        print(f"📊 Starting log monitor for: {log_file}")
+        monitor = LogMonitor(str(log_file), update_render_state)
+        monitor.start()
+
+        # Update render state
+        render_state["log_file"] = str(log_file)
+        render_state["project_name"] = project_name
+        render_state["status"] = "rendering"
+        render_state["configured_batches"] = configured_batches
+        render_state["total_batches"] = len(batches)
+        render_state["total_frames"] = total_frames
+        render_state["batches"] = []  # Will be populated by monitor as batches start
+
+        print(f"✅ Saved render configuration to config.json")
+        print(f"   - Project: {project_name}")
+        print(f"   - Batches: {len(configured_batches)}")
+        print(f"   - Total Frames: {total_frames}")
+
         return {
             "status": "ok",
-            "message": "Render job started",
-            "log_file": log_file,
-            "output_dir": output_dir
+            "message": "Render job started in Terminal",
+            "log_file": str(log_file),
+            "output_dir": str(output_dir),
+            "temp_config": temp_config_path
         }
 
     except Exception as e:
@@ -325,19 +570,83 @@ async def start_render(render_config: Dict[str, Any]):
 async def cancel_render():
     """Cancel the current render job"""
     try:
-        # TODO: Implement actual render cancellation
-        # This would need to:
-        # 1. Find the running Blender process
-        # 2. Send SIGTERM to gracefully stop it
-        # 3. Update render state
+        import subprocess
+        import signal
 
-        return {
-            "status": "ok",
-            "message": "Render job cancelled"
-        }
+        # Find all running Blender processes
+        result = subprocess.run(
+            ['pgrep', '-f', 'Blender'],
+            capture_output=True,
+            text=True
+        )
+
+        if result.returncode == 0 and result.stdout.strip():
+            pids = result.stdout.strip().split('\n')
+            killed_count = 0
+
+            for pid in pids:
+                try:
+                    pid_int = int(pid)
+                    # Send SIGTERM for graceful shutdown
+                    subprocess.run(['kill', '-TERM', str(pid_int)])
+                    killed_count += 1
+                    print(f"✓ Sent SIGTERM to Blender process {pid_int}")
+                except ValueError:
+                    continue
+
+            # Stop monitoring
+            global monitor, current_log_file
+            if monitor:
+                monitor.stop()
+                monitor = None
+
+            # Remove the log file if it exists
+            log_removed = False
+            if current_log_file and Path(current_log_file).exists():
+                try:
+                    Path(current_log_file).unlink()
+                    print(f"✓ Removed log file: {current_log_file}")
+                    log_removed = True
+                except Exception as e:
+                    print(f"⚠️  Failed to remove log file: {e}")
+
+            # Update render state
+            global render_state
+            render_state["status"] = "cancelled"
+            render_state["log_file"] = ""
+            render_state["configured_batches"] = []
+            render_state["batches"] = []
+
+            # Clear render config from config.json
+            config = get_config()
+            config.clear_current_render()
+            config.clear_active_render()
+            print("✅ Cleared render configuration from config.json")
+
+            # Broadcast update to all clients
+            await manager.broadcast({
+                "type": "status_update",
+                "data": render_state
+            })
+
+            message = f"Cancelled {killed_count} Blender process(es)"
+            if log_removed:
+                message += " and removed log file"
+
+            return {
+                "status": "ok",
+                "message": message
+            }
+        else:
+            return {
+                "status": "ok",
+                "message": "No running Blender processes found"
+            }
 
     except Exception as e:
         print(f"Error cancelling render: {e}")
+        import traceback
+        traceback.print_exc()
         return {"status": "error", "message": str(e)}
 
 
@@ -542,6 +851,79 @@ def get_local_ip() -> str:
         return "127.0.0.1"
 
 
+def _merge_batch_states():
+    """
+    Merge configured_batches with log-detected batches to show complete queue.
+    Updates render_state['batches'], 'high_priority_list', 'low_priority_list', and 'completed_list'.
+    """
+    global render_state
+
+    configured = render_state.get("configured_batches", [])
+
+    if not configured:
+        # No configured batches, just use log batches from monitor
+        return
+
+    # Collect all log batches from monitor's priority lists
+    log_batches = []
+    log_batches.extend(render_state.get("high_priority_list", []))
+    log_batches.extend(render_state.get("low_priority_list", []))
+    log_batches.extend(render_state.get("completed_list", []))
+
+    # Create a map of log batches by frame range for quick lookup
+    log_batch_map = {}
+    for log_batch in log_batches:
+        key = (log_batch['start'], log_batch['end'])
+        log_batch_map[key] = log_batch
+
+    # Merge: start with configured batches, update status from log batches
+    merged = []
+    high_priority_list = []
+    low_priority_list = []
+    completed_list = []
+
+    for config_batch in configured:
+        key = (config_batch['start'], config_batch['end'])
+
+        if key in log_batch_map:
+            # This batch has been seen in the log - use log data but keep config name/priority
+            log_batch = log_batch_map[key]
+            merged_batch = {
+                **config_batch,  # Keep configured name, priority
+                'completed': log_batch.get('completed', False),
+                'rendering': not log_batch.get('completed', False)  # If not completed, it's rendering or waiting
+            }
+        else:
+            # This batch hasn't started yet - keep as configured (pending)
+            merged_batch = {
+                **config_batch,
+                'completed': False,
+                'rendering': False  # Hasn't started yet
+            }
+
+        merged.append(merged_batch)
+
+        # Categorize into priority lists
+        if merged_batch['completed']:
+            completed_list.append(merged_batch)
+        elif merged_batch.get('priority') == '1':
+            high_priority_list.append(merged_batch)
+        else:
+            # priority is 'null', '0', or anything else = low priority
+            low_priority_list.append(merged_batch)
+
+    # Update render_state with merged batches and priority lists
+    render_state["batches"] = merged
+    render_state["high_priority_list"] = high_priority_list
+    render_state["low_priority_list"] = low_priority_list
+    render_state["completed_list"] = completed_list
+
+    # Update counts
+    render_state["high_priority_batches"] = len(high_priority_list)
+    render_state["low_priority_batches"] = len(low_priority_list)
+    render_state["completed_batches"] = len(completed_list)
+
+
 def update_render_state(updates: Dict[str, Any]):
     """Update global render state and broadcast to clients"""
     global render_state
@@ -586,6 +968,12 @@ def update_render_state(updates: Dict[str, Any]):
         # Silently ignore calculation errors
         pass
 
+    # Merge configured_batches with log batches for complete view
+    try:
+        _merge_batch_states()
+    except Exception as e:
+        print(f"Error merging batch states: {e}")
+
     # Broadcast to all connected WebSocket clients (non-blocking)
     try:
         loop = asyncio.get_event_loop()
@@ -619,6 +1007,22 @@ def main():
     parser.add_argument("--frames", type=int, help="Total number of frames")
 
     args = parser.parse_args()
+
+    # Load current render configuration from config.json (static data)
+    config = get_config()
+    current_render = config.get_current_render()
+
+    if current_render and current_render.get('configured_batches') and not args.logfile:
+        print(f"📋 Restoring render from config.json: {current_render.get('project_name', 'Unknown')}")
+        render_state["project_name"] = current_render.get('project_name', '')
+        render_state["configured_batches"] = current_render.get('configured_batches', [])
+        render_state["total_batches"] = len(render_state["configured_batches"])
+        render_state["total_frames"] = current_render.get('total_frames', 0)
+        render_state["status"] = current_render.get('status', 'idle')
+        args.logfile = current_render.get('log_file')
+        print(f"   - Batches: {len(render_state['configured_batches'])}")
+        print(f"   - Total Frames: {render_state['total_frames']}")
+        print(f"   - Status: {render_state['status']}")
 
     # Update initial state with provided info
     if args.project:
