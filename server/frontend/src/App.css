@@ -263,10 +263,39 @@ body {
   border-left: 4px solid rgba(0, 0, 0, 0.2);
 }
 
+.batch-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+  gap: 8px;
+}
+
 .batch-name {
   font-weight: 600;
   color: #374151;
-  margin-bottom: 4px;
+  flex: 1;
+}
+
+.batch-status {
+  font-size: 0.75rem;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.batch-status.rendering {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: white;
+}
+
+.batch-status.pending {
+  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+  color: white;
 }
 
 .batch-details {

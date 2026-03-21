@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faFolderOpen, faGlobe, faChartBar, faTriangleExclamation,
   faChartLine, faStopwatch, faClock, faBolt, faLevelDown,
-  faCheckCircle, faFileLines
+  faCheckCircle, faFileLines, faFilm
 } from '@fortawesome/free-solid-svg-icons'
 import '../App.css'
 
@@ -277,14 +277,28 @@ function ProgressMonitor({ renderState, connected }) {
             </div>
             <ul className="batch-list">
               {renderState.high_priority_list && renderState.high_priority_list.length > 0 ? (
-                renderState.high_priority_list.map((batch, idx) => (
-                  <li key={idx} className="batch-item">
-                    <div className="batch-name">{batch.name}</div>
-                    <div className="batch-details">
-                      {String(batch.start).padStart(4, '0')} - {String(batch.end).padStart(4, '0')} • {batch.frames} frames
-                    </div>
-                  </li>
-                ))
+                renderState.high_priority_list.map((batch, idx) => {
+                  const isRendering = batch.number === renderState.current_batch && !batch.completed
+                  return (
+                    <li key={idx} className="batch-item">
+                      <div className="batch-header">
+                        <div className="batch-name">{batch.name}</div>
+                        {isRendering ? (
+                          <span className="batch-status rendering">
+                            <FontAwesomeIcon icon={faFilm} /> Rendering
+                          </span>
+                        ) : (
+                          <span className="batch-status pending">
+                            <FontAwesomeIcon icon={faClock} /> Pending
+                          </span>
+                        )}
+                      </div>
+                      <div className="batch-details">
+                        {String(batch.start).padStart(4, '0')} - {String(batch.end).padStart(4, '0')} • {batch.frames} frames
+                      </div>
+                    </li>
+                  )
+                })
               ) : (
                 <li className="batch-empty">No high priority batches</li>
               )}
@@ -304,14 +318,28 @@ function ProgressMonitor({ renderState, connected }) {
             </div>
             <ul className="batch-list">
               {renderState.low_priority_list && renderState.low_priority_list.length > 0 ? (
-                renderState.low_priority_list.map((batch, idx) => (
-                  <li key={idx} className="batch-item">
-                    <div className="batch-name">{batch.name}</div>
-                    <div className="batch-details">
-                      {String(batch.start).padStart(4, '0')} - {String(batch.end).padStart(4, '0')} • {batch.frames} frames
-                    </div>
-                  </li>
-                ))
+                renderState.low_priority_list.map((batch, idx) => {
+                  const isRendering = batch.number === renderState.current_batch && !batch.completed
+                  return (
+                    <li key={idx} className="batch-item">
+                      <div className="batch-header">
+                        <div className="batch-name">{batch.name}</div>
+                        {isRendering ? (
+                          <span className="batch-status rendering">
+                            <FontAwesomeIcon icon={faFilm} /> Rendering
+                          </span>
+                        ) : (
+                          <span className="batch-status pending">
+                            <FontAwesomeIcon icon={faClock} /> Pending
+                          </span>
+                        )}
+                      </div>
+                      <div className="batch-details">
+                        {String(batch.start).padStart(4, '0')} - {String(batch.end).padStart(4, '0')} • {batch.frames} frames
+                      </div>
+                    </li>
+                  )
+                })
               ) : (
                 <li className="batch-empty">No low priority batches</li>
               )}
