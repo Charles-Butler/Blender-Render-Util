@@ -956,6 +956,18 @@ def _merge_batch_states():
     render_state["low_priority_batches"] = len(low_priority_list)
     render_state["completed_batches"] = len(completed_list)
 
+    # Check if ALL configured batches are complete
+    all_batches_complete = all(batch.get('completed', False) for batch in merged)
+    if all_batches_complete and len(merged) > 0:
+        import time
+        if not render_state.get('end_time'):
+            render_state['end_time'] = time.time()
+        render_state['status'] = 'completed'
+        print("✅ All configured batches completed!")
+    elif render_state.get('status') == 'completed' and not all_batches_complete:
+        # If status was 'completed' but we still have incomplete batches, set back to rendering
+        render_state['status'] = 'rendering'
+
 
 def update_render_state(updates: Dict[str, Any]):
     """Update global render state and broadcast to clients"""
