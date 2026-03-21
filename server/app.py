@@ -809,6 +809,8 @@ async def override_log_file(data: Dict[str, str]):
 @app.on_event("startup")
 async def startup_event():
     """Initialize services on startup"""
+    global monitor, current_log_file, render_state
+
     print("="*60)
     print("🚀 Blender Render Monitor Starting...")
     print("="*60)
@@ -821,6 +823,37 @@ async def startup_event():
     print(f"Local IP: {local_ip}")
     print(f"Server: http://localhost:8080")
     print(f"Network: http://{local_ip}:8080")
+    print("="*60)
+
+    # Load current render configuration from config.json
+    config = get_config()
+    current_render = config.get_current_render()
+
+    if current_render and current_render.get('configured_batches'):
+        print(f"\n📋 Restoring render from config.json: {current_render.get('project_name', 'Unknown')}")
+        render_state["project_name"] = current_render.get('project_name', '')
+        render_state["configured_batches"] = current_render.get('configured_batches', [])
+        render_state["total_batches"] = len(render_state["configured_batches"])
+        render_state["total_frames"] = current_render.get('total_frames', 0)
+        render_state["status"] = current_render.get('status', 'idle')
+        log_file = current_render.get('log_file')
+        print(f"   - Batches: {len(render_state['configured_batches'])}")
+        print(f"   - Total Frames: {render_state['total_frames']}")
+        print(f"   - Status: {render_state['status']}")
+
+        # Start monitoring if we have a log file and status is rendering
+        if log_file and render_state["status"] == "rendering":
+            import os
+            if os.path.exists(log_file):
+                print(f"📊 Starting log monitor: {log_file}")
+                monitor = LogMonitor(log_file, update_render_state)
+                monitor.start()
+                current_log_file = log_file
+                render_state["log_file"] = log_file
+            else:
+                print(f"⚠️  Log file not found: {log_file}")
+                render_state["status"] = "idle"
+
     print("="*60)
 
 
