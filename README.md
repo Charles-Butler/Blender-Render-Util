@@ -395,7 +395,7 @@ The script will automatically detect running Blender processes and offer to moni
   - Clock (fa-clock) for time-related stats and pending status
   - Removed target emoji from Render Order heading
 
-### v4.0 - Full Web-Based Render Configuration & Execution _(Current)_
+### v4.0 - Full Web-Based Render Configuration & Execution
 
 - **Complete Render Workflow from Web UI**:
   - Web-based batch configuration replaces manual script editing
@@ -433,6 +433,29 @@ The script will automatically detect running Blender processes and offer to moni
   - Shows batch status (completed, rendering, pending) on Configure page
   - Read-only mode displays active render configuration with status badges
   - Dual-mode interface: editable when idle, read-only when rendering
+
+### v4.1 - Enhanced Monitoring & Status Visibility _(Current)_
+
+- **Automatic State Restoration on Server Restart**:
+  - Server startup event loads render configuration from `config.json`
+  - Automatically starts log monitor if status is "rendering"
+  - Seamless recovery from server restarts during active renders
+  - No manual intervention required to resume monitoring
+- **Real-Time Batch Status Badges**:
+  - High Priority and Low Priority lists show status for each batch
+  - "Rendering" badge (orange gradient) with film icon for active batch
+  - "Pending" badge (blue gradient) with clock icon for queued batches
+  - Instant visual feedback of which batch is currently rendering
+- **Fixed Batch Transition Tracking**:
+  - Monitor correctly identifies when pre-configured batches begin rendering
+  - `current_batch` number updates properly when switching between batches
+  - Existing batch detection now sets batch number from batch metadata
+  - Eliminates incorrect batch number display during transitions
+- **Improved Priority List Population**:
+  - All configured batches appear in priority lists immediately on page load
+  - Batches visible before they start rendering (not just after detection)
+  - Merge function rebuilds priority lists from configured batches
+  - Complete queue visibility from the start of the render job
 
 ---
 
