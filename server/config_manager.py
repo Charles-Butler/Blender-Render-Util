@@ -5,6 +5,7 @@ Handles reading and writing persistent configuration settings
 """
 
 import json
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -49,6 +50,16 @@ class ConfigManager:
                 "last_project_name": "",
                 "default_output_dir": "./renders",
                 "last_batch_count": 0
+            },
+            "current_render": {
+                "project_name": "",
+                "blend_file": "",
+                "configured_batches": [],
+                "total_frames": 0,
+                "status": "idle",
+                "log_file": "",
+                "output_dir": "",
+                "timestamp": ""
             },
             "server": {
                 "default_port": 8081,
@@ -162,6 +173,120 @@ class ConfigManager:
         """Update render settings"""
         self.set('render', 'last_project_name', value=project_name)
         self.set('render', 'last_batch_count', value=batch_count)
+
+    def save_active_render(self, render_config: Dict[str, Any]) -> None:
+        """
+        Save active render configuration for persistence across restarts
+
+        Args:
+            render_config: Full render configuration including batches
+        """
+        self.set('monitoring', 'active_render', value=render_config)
+        self.set('monitoring', 'current_log_file', value=render_config.get('log_file', ''))
+
+    def get_active_render(self) -> Optional[Dict[str, Any]]:
+        """Get active render configuration if one exists"""
+        return self.get('monitoring', 'active_render', default=None)
+
+    def clear_active_render(self) -> None:
+        """Clear active render configuration"""
+        if 'monitoring' in self.config:
+            if 'active_render' in self.config['monitoring']:
+                del self.config['monitoring']['active_render']
+            self._save_config(self.config)
+
+    def save_batch_profile(self, profile_name: str, batches: list) -> None:
+        """
+        Save a batch profile for reuse
+
+        Args:
+            profile_name: Name for this profile (e.g., "last", "default", custom name)
+            batches: List of batch configurations
+        """
+        if 'batch_profiles' not in self.config:
+            self.config['batch_profiles'] = {}
+
+        self.config['batch_profiles'][profile_name] = {
+            'batches': batches,
+            'saved_at': datetime.now().isoformat(),
+            'total_frames': sum(b['end'] - b['start'] + 1 for b in batches),
+            'batch_count': len(batches)
+        }
+        self._save_config(self.config)
+
+    def get_batch_profile(self, profile_name: str) -> Optional[Dict[str, Any]]:
+        """
+        Get a saved batch profile
+
+        Args:
+            profile_name: Name of the profile to retrieve
+
+        Returns:
+            Profile data or None if not found
+        """
+        return self.get('batch_profiles', profile_name, default=None)
+
+    def get_all_batch_profiles(self) -> Dict[str, Any]:
+        """Get all saved batch profiles"""
+        return self.get('batch_profiles', default={})
+
+    def delete_batch_profile(self, profile_name: str) -> bool:
+        """
+        Delete a batch profile
+
+        Args:
+            profile_name: Name of profile to delete
+
+        Returns:
+            True if deleted, False if not found
+        """
+        if 'batch_profiles' in self.config and profile_name in self.config['batch_profiles']:
+            del self.config['batch_profiles'][profile_name]
+            self._save_config(self.config)
+            return True
+        return False
+
+    def update_current_render(self, render_data: Dict[str, Any]) -> None:
+        """
+        Update current render configuration in config.json
+        This is the primary storage for render state - faster than memory
+
+        Args:
+            render_data: Render configuration data
+        """
+        if 'current_render' not in self.config:
+            self.config['current_render'] = {}
+
+        # Merge with existing data
+        self.config['current_render'].update(render_data)
+        self._save_config(self.config)
+
+    def get_current_render(self) -> Dict[str, Any]:
+        """Get current render configuration from config.json"""
+        return self.get('current_render', default={
+            'project_name': '',
+            'blend_file': '',
+            'configured_batches': [],
+            'total_frames': 0,
+            'status': 'idle',
+            'log_file': '',
+            'output_dir': '',
+            'timestamp': ''
+        })
+
+    def clear_current_render(self) -> None:
+        """Clear current render configuration"""
+        self.config['current_render'] = {
+            'project_name': '',
+            'blend_file': '',
+            'configured_batches': [],
+            'total_frames': 0,
+            'status': 'idle',
+            'log_file': '',
+            'output_dir': '',
+            'timestamp': ''
+        }
+        self._save_config(self.config)
 
 
 # Global config instance

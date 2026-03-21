@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faFolderOpen, faPlay, faStop, faCheckCircle,
-  faClock, faTrash, faFilm, faListAlt
+  faClock, faTrash, faFilm, faListAlt, faHistory
 } from '@fortawesome/free-solid-svg-icons';
 import './ConfigureRender.css';
 
@@ -11,12 +11,15 @@ function ConfigureRender({
   readOnly = false,
   onCancelRender,
   renderState,
+  isStartingRender = false,
 }) {
   const [projectName, setProjectName] = useState('');
   const [blendFile, setBlendFile] = useState('');
   const [recentFiles, setRecentFiles] = useState([]);
   const [batches, setBatches] = useState([]);
   const [showAddBatch, setShowAddBatch] = useState(false);
+  const [showFileBrowser, setShowFileBrowser] = useState(false);
+  const [availableFiles, setAvailableFiles] = useState([]);
 
   // New batch form state
   const [newBatch, setNewBatch] = useState({
@@ -32,13 +35,38 @@ function ConfigureRender({
     fetchRecentFiles();
   }, []);
 
-  // Update batches and project info when monitoring active render
+  // Update batches from renderState (passed from App.jsx via WebSocket)
   useEffect(() => {
-    if (readOnly && renderState) {
-      // Fetch current render state to populate batches
-      fetchRenderState();
+    if (renderState && renderState.status === 'rendering') {
+      // Get batches from render state (high priority, low priority, completed)
+      const highPriority = renderState.high_priority_list || [];
+      const lowPriority = renderState.low_priority_list || [];
+      const completed = renderState.completed_list || [];
+
+      // Combine all lists with status
+      const allBatches = [
+        ...completed.map((b) => ({ ...b, status: 'completed' })),
+        ...highPriority.map((b) => ({
+          ...b,
+          status: b.number === renderState.current_batch ? 'rendering' : 'pending'
+        })),
+        ...lowPriority.map((b) => ({
+          ...b,
+          status: b.number === renderState.current_batch ? 'rendering' : 'pending'
+        })),
+      ];
+
+      // Only update if we're in read-only mode OR if batches are empty
+      if (readOnly || batches.length === 0) {
+        setBatches(allBatches);
+      }
+
+      // Update project name if in read-only mode
+      if (readOnly && renderState.project_name) {
+        setProjectName(renderState.project_name);
+      }
     }
-  }, [readOnly, renderState]);
+  }, [renderState, readOnly]);
 
   const fetchConfig = async () => {
     try {
@@ -96,6 +124,38 @@ function ConfigureRender({
     }
   };
 
+  const handleBrowseFiles = async () => {
+    try {
+      const response = await fetch('http://localhost:8081/api/blend-files/browse');
+      const data = await response.json();
+      if (data.status === 'ok') {
+        setAvailableFiles(data.blend_files || []);
+        setShowFileBrowser(true);
+      }
+    } catch (error) {
+      console.error('Failed to browse files:', error);
+      alert('Failed to browse for blend files. Check console for details.');
+    }
+  };
+
+  const handleSelectBrowsedFile = async (filepath) => {
+    setBlendFile(filepath);
+    setShowFileBrowser(false);
+
+    // Add to recent files
+    try {
+      await fetch('http://localhost:8081/api/blend-files/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filepath })
+      });
+      // Refresh recent files
+      fetchRecentFiles();
+    } catch (error) {
+      console.error('Failed to add file to recents:', error);
+    }
+  };
+
   const handleAddBatch = () => {
     if (!newBatch.start || !newBatch.end) {
       alert('Please enter start and end frames');
@@ -141,6 +201,32 @@ function ConfigureRender({
       name: batch.name.startsWith('Batch ') ? `Batch ${i + 1}` : batch.name,
     }));
     setBatches(renumbered);
+  };
+
+  const handleLoadLastProfile = async () => {
+    try {
+      const response = await fetch('http://localhost:8081/api/batch-profiles/last');
+      const data = await response.json();
+
+      if (data.status === 'ok' && data.profile) {
+        const loadedBatches = data.profile.batches.map((batch, index) => ({
+          number: index + 1,
+          start: batch.start,
+          end: batch.end,
+          frames: batch.end - batch.start + 1,
+          name: batch.name || `Batch ${index + 1}`,
+          priority: batch.priority || 'null',
+        }));
+
+        setBatches(loadedBatches);
+        alert(`Loaded ${loadedBatches.length} batches from last profile`);
+      } else {
+        alert('No previous batch profile found');
+      }
+    } catch (error) {
+      console.error('Failed to load batch profile:', error);
+      alert('Failed to load batch profile');
+    }
   };
 
   const getSortedBatches = () => {
@@ -230,38 +316,94 @@ function ConfigureRender({
               {readOnly ? (
                 <div className='read-only-value'>{blendFile}</div>
               ) : (
-                <select
-                  value={blendFile}
-                  onChange={(e) => setBlendFile(e.target.value)}
-                  className='input-field'
-                >
-                  <option value=''>Select a blend file...</option>
-                  {recentFiles.map((file, idx) => (
-                    <option key={idx} value={file}>
-                      {file}
-                    </option>
-                  ))}
-                </select>
+                <>
+                  <select
+                    value={blendFile}
+                    onChange={(e) => setBlendFile(e.target.value)}
+                    className='input-field'
+                  >
+                    <option value=''>Select a blend file...</option>
+                    {recentFiles.map((file, idx) => (
+                      <option key={idx} value={file}>
+                        {file}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    className='btn-secondary'
+                    onClick={handleBrowseFiles}
+                    style={{ marginTop: '8px', width: '100%' }}
+                  >
+                    <FontAwesomeIcon icon={faFolderOpen} /> Browse for More Files
+                  </button>
+                </>
               )}
             </div>
+
+            {/* File Browser Modal */}
+            {showFileBrowser && (
+              <div className='modal-overlay' onClick={() => setShowFileBrowser(false)}>
+                <div className='modal-content' onClick={(e) => e.stopPropagation()}>
+                  <h3>Select Blend File</h3>
+                  <div className='file-list'>
+                    {availableFiles.length === 0 ? (
+                      <p>No .blend files found. Scanning common directories...</p>
+                    ) : (
+                      availableFiles.map((file, idx) => (
+                        <div
+                          key={idx}
+                          className='file-item'
+                          onClick={() => handleSelectBrowsedFile(file)}
+                        >
+                          <FontAwesomeIcon icon={faFilm} />
+                          <span className='file-path'>{file}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  <button
+                    className='btn-secondary'
+                    onClick={() => setShowFileBrowser(false)}
+                    style={{ marginTop: '16px' }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Action Buttons inside Project Settings */}
             <div className='action-buttons-inline'>
               <button
                 className='btn-start-render'
                 onClick={handleStartRender}
-                disabled={batches.length === 0 || readOnly}
+                disabled={batches.length === 0 || readOnly || isStartingRender}
               >
-                <FontAwesomeIcon icon={faPlay} /> Start Job
+                <FontAwesomeIcon icon={isStartingRender ? faClock : faPlay} />
+                {isStartingRender ? ' Starting Render...' : ' Start Job'}
               </button>
               <button
                 className='btn-danger'
                 onClick={onCancelRender}
-                disabled={!readOnly}
+                disabled={!readOnly || isStartingRender}
               >
                 <FontAwesomeIcon icon={faStop} /> Cancel Job
               </button>
             </div>
+            {isStartingRender && (
+              <div style={{
+                marginTop: '10px',
+                padding: '10px',
+                backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                border: '1px solid rgba(255, 193, 7, 0.3)',
+                borderRadius: '4px',
+                color: '#ffc107'
+              }}>
+                <FontAwesomeIcon icon={faClock} /> Launching render and waiting for log file generation...
+                <br />
+                <small>You will be redirected to the monitor page in 5 seconds.</small>
+              </div>
+            )}
           </div>
 
           {/* Right: Frame Selection */}
@@ -272,6 +414,13 @@ function ConfigureRender({
               </h3>
               {!readOnly && (
                 <div className='frame-selection-buttons'>
+                  <button
+                    className='btn-icon'
+                    onClick={handleLoadLastProfile}
+                    title='Load Last Batch Profile'
+                  >
+                    <FontAwesomeIcon icon={faHistory} />
+                  </button>
                   <button
                     className='btn-icon'
                     onClick={() => setShowAddBatch(true)}
