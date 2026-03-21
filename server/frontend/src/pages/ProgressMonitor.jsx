@@ -181,7 +181,7 @@ function ProgressMonitor({ renderState, connected }) {
               className="progress-fill overall"
               style={{ width: `${renderState.overall_progress}%` }}
             >
-              {renderState.overall_progress}%
+              {renderState.overall_progress >= 1 ? `${renderState.overall_progress}%` : ''}
             </div>
           </div>
         </div>
@@ -207,7 +207,7 @@ function ProgressMonitor({ renderState, connected }) {
               className="progress-fill batch"
               style={{ width: `${Math.max(0, Math.min(100, renderState.batch_progress))}%` }}
             >
-              {Math.max(0, Math.min(100, renderState.batch_progress))}%
+              {Math.max(0, Math.min(100, renderState.batch_progress)) >= 1 ? `${Math.max(0, Math.min(100, renderState.batch_progress))}%` : ''}
             </div>
           </div>
           {renderState.batch_progress < 0 && (
