@@ -457,7 +457,7 @@ The script will automatically detect running Blender processes and offer to moni
   - Merge function rebuilds priority lists from configured batches
   - Complete queue visibility from the start of the render job
 
-### v4.2 - Bug Fixes _(Current)_
+### v4.2 - Bug Fixes
 
 - **Overall Progress & Elapsed Time Reset on New Render**:
   - `start_render` now clears all stale state from the previous render (frames completed, overall progress, priority lists, ETAs, start/end time) before applying new render values
@@ -468,6 +468,22 @@ The script will automatically detect running Blender processes and offer to moni
   - `batch_name` regex matched the same log line as `batch_start` and was evaluated first, silently skipping `batch_start` for every batch after the first
   - `batch_start_frame`/`batch_end_frame` were never updated on batch transitions, causing negative batch progress and the spurious "outside batch range" warning
   - Removed the redundant `batch_name` early-return block — name and priority extraction already handled inside `batch_start`
+
+### v4.3 - Project Cleanup & Reorganization _(Current)_
+
+- **Removed Legacy & Redundant Files**:
+  - `server/static/index.html` (v2.3.1 HTML dashboard — replaced by React frontend)
+  - Broken test files: `test_full_stack.sh`, `test_server.py`, `test_launch.sh`, `test_render.log`
+  - Unused template assets: `vite.svg`, `react.svg`
+- **Reorganized Project Structure**:
+  - `watch_render_progress.sh` → `legacy/` (terminal monitor superseded by web dashboard)
+  - `design/README.md` → `legacy/DESIGN_NOTES.md`
+  - `BLEND_FILE_SELECTION.md` → `docs/`
+- **Config & Portability**:
+  - `server/config.json` added to `.gitignore` (contains machine-specific runtime state)
+  - `server/config.template.json` added for new installs
+  - `websockets` added to `requirements.txt`
+  - All hardcoded paths removed from `QUICKSTART.md`
 
 ---
 
@@ -699,17 +715,3 @@ git push origin develop
 - [ ] Pause/resume batch rendering
 - [ ] Historical render statistics and analytics
 
-⏺ Here are the commands to restart both servers:
-
-Backend Server (port 8081):
-cd /Users/me/Podcast/3D-Animation/Repos/Blender-Render-Util/server && python3 app.py --port 8081 --logfile
-/Users/me/Podcast/3D-Animation/Repos/renders/005_TOR_RER_2026-02-27_18-07-23/005_TOR_RER_2026-02-27_18-07-23_render_log.txt --project
-"005_TOR_RER" --batches 8 --frames 527 > /tmp/server.log 2>&1 &
-
-Frontend Server (port 5173):
-cd /Users/me/Podcast/3D-Animation/Repos/Blender-Render-Util/server/frontend && npm run dev -- --host 0.0.0.0 > /tmp/vite.log 2>&1 &
-
-Then access the dashboard at:
-
-- Local: http://localhost:5173/
-- Network: http://192.168.0.147:5173/

@@ -5,6 +5,28 @@ All notable changes to Blender Batch Render Utilities will be documented in this
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.3.0] - 2026-04-18
+
+### Changed
+- **Project Cleanup & Reorganization**
+  - Deleted `server/static/index.html` — legacy v2.3.1 HTML dashboard superseded by React frontend
+  - Deleted `server/test_full_stack.sh`, `test_server.py`, `test_launch.sh`, `test_render.log` — broken/obsolete test files
+  - Deleted `server/frontend/public/vite.svg`, `src/assets/react.svg` — unused Vite/React template assets
+  - Moved `watch_render_progress.sh` → `legacy/` (README already marked it legacy)
+  - Moved `design/README.md` → `legacy/DESIGN_NOTES.md` (pre-v3 planning doc)
+  - Moved `BLEND_FILE_SELECTION.md` → `docs/` (implementation docs out of root)
+  - Removed hardcoded server restart commands paste-in from README.md EOF
+  - Replaced all absolute `/Users/me/...` paths in QUICKSTART.md with relative paths
+  - Fixed `Blender-Utilities` path typo in QUICKSTART.md → `Blender-Render-Util`
+
+- **Config & Dependencies**
+  - Added `server/config.json` to `.gitignore` — contains machine-specific paths and runtime render state
+  - Created `server/config.template.json` — clean reference template for new installs
+  - Added missing `websockets` to `server/requirements.txt`
+  - Updated `batchedFrame_render.sh` header from v2.3 to v4.3.0
+
+---
+
 ## [4.2.1] - 2026-04-18
 
 ### Fixed

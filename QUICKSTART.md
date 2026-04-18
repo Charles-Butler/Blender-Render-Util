@@ -15,14 +15,14 @@ This system allows you to configure and launch Blender batch renders through a w
 ### 1. Install Backend Dependencies
 
 ```bash
-cd /Users/me/Podcast/3D-Animation/Repos/Blender-Render-Util/server
+cd /path/to/Blender-Render-Util/server
 pip3 install -r requirements.txt
 ```
 
 ### 2. Install Frontend Dependencies
 
 ```bash
-cd /Users/me/Podcast/3D-Animation/Repos/Blender-Render-Util/server/frontend
+cd /path/to/Blender-Render-Util/server/frontend
 npm install
 ```
 
@@ -33,7 +33,7 @@ npm install
 ### Terminal 1: Start Backend Server
 
 ```bash
-cd /Users/me/Podcast/3D-Animation/Repos/Blender-Render-Util/server
+cd server
 python3 app.py --port 8081
 ```
 
@@ -46,7 +46,7 @@ You should see:
 ### Terminal 2: Start Frontend Dev Server
 
 ```bash
-cd /Users/me/Podcast/3D-Animation/Repos/Blender-Render-Util/server/frontend
+cd server/frontend
 npm run dev
 ```
 
@@ -61,7 +61,7 @@ You should see:
 To test the bash script directly without the web interface:
 
 ```bash
-cd /Users/me/Podcast/3D-Animation/Repos/Blender-Utilities
+cd /path/to/Blender-Render-Util
 ./batchedFrame_render.sh
 ```
 
@@ -131,7 +131,7 @@ On the **Configure** page:
 Renders are saved to:
 
 ```
-/Users/me/Podcast/3D-Animation/Repos/Blender-Render-Util/renders/
+renders/
 └── {PROJECT_NAME}_{TIMESTAMP}/
     ├── {PROJECT_NAME}_{TIMESTAMP}_render_log.txt
     └── [rendered frames...]
@@ -174,7 +174,7 @@ npm run dev -- --port 5174
 
 1. Check that the bash script is executable:
    ```bash
-   chmod +x /Users/me/Podcast/3D-Animation/Repos/Blender-Utilities/batchedFrame_render.sh
+   chmod +x batchedFrame_render.sh
    ```
 
 2. Check Terminal permissions in System Preferences → Security & Privacy
