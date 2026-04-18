@@ -434,7 +434,7 @@ The script will automatically detect running Blender processes and offer to moni
   - Read-only mode displays active render configuration with status badges
   - Dual-mode interface: editable when idle, read-only when rendering
 
-### v4.1 - Enhanced Monitoring & Status Visibility _(Current)_
+### v4.1 - Enhanced Monitoring & Status Visibility
 
 - **Automatic State Restoration on Server Restart**:
   - Server startup event loads render configuration from `config.json`
@@ -456,6 +456,18 @@ The script will automatically detect running Blender processes and offer to moni
   - Batches visible before they start rendering (not just after detection)
   - Merge function rebuilds priority lists from configured batches
   - Complete queue visibility from the start of the render job
+
+### v4.2 - Bug Fixes _(Current)_
+
+- **Overall Progress & Elapsed Time Reset on New Render**:
+  - `start_render` now clears all stale state from the previous render (frames completed, overall progress, priority lists, ETAs, start/end time) before applying new render values
+  - Fixes overall progress showing 100% when configuring a new render after a completed one
+  - Fixes elapsed time displaying negative values (e.g. `-630:-53:-17`) caused by stale `end_time` surviving into the new render session
+  - Frontend guard added (`Math.max(0, ...)`) as a safety net against future stale timestamp edge cases
+- **"Frame X outside batch range" error on batch transition**:
+  - `batch_name` regex matched the same log line as `batch_start` and was evaluated first, silently skipping `batch_start` for every batch after the first
+  - `batch_start_frame`/`batch_end_frame` were never updated on batch transitions, causing negative batch progress and the spurious "outside batch range" warning
+  - Removed the redundant `batch_name` early-return block — name and priority extraction already handled inside `batch_start`
 
 ---
 

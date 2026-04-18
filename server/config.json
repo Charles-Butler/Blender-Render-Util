@@ -7,7 +7,7 @@
     ]
   },
   "render": {
-    "last_project_name": "TOR_CrimsonDesert",
+    "last_project_name": "TOR_Pragmata",
     "default_output_dir": "./renders",
     "last_batch_count": 7
   },
@@ -20,13 +20,13 @@
     "auto_start_monitoring": true
   },
   "monitoring": {
-    "current_log_file": "/Users/me/Podcast/3D-Animation/Repos/Blender-Render-Util/renders/TOR_CrimsonDesert_2026-03-19_19-36-55/TOR_CrimsonDesert_2026-03-19_19-36-55_render_log.txt",
+    "current_log_file": "/Users/me/Podcast/3D-Animation/Repos/Blender-Render-Util/renders/TOR_Pragmata_2026-04-17_20-15-49/TOR_Pragmata_2026-04-17_20-15-49_render_log.txt",
     "active_render": {
-      "project_name": "TOR_CrimsonDesert",
+      "project_name": "TOR_Pragmata",
       "blend_file": "/Users/me/Podcast/3D-Animation/WIP - Blender/Delivery/FILE ANIM/TOR_caseSwap.blend",
-      "log_file": "/Users/me/Podcast/3D-Animation/Repos/Blender-Render-Util/renders/TOR_CrimsonDesert_2026-03-19_19-36-55/TOR_CrimsonDesert_2026-03-19_19-36-55_render_log.txt",
-      "output_dir": "/Users/me/Podcast/3D-Animation/Repos/Blender-Render-Util/renders/TOR_CrimsonDesert_2026-03-19_19-36-55",
-      "timestamp": "2026-03-19_19-36-55",
+      "log_file": "/Users/me/Podcast/3D-Animation/Repos/Blender-Render-Util/renders/TOR_Pragmata_2026-04-17_20-15-49/TOR_Pragmata_2026-04-17_20-15-49_render_log.txt",
+      "output_dir": "/Users/me/Podcast/3D-Animation/Repos/Blender-Render-Util/renders/TOR_Pragmata_2026-04-17_20-15-49",
+      "timestamp": "2026-04-17_20-15-49",
       "configured_batches": [
         {
           "number": 1,
@@ -107,7 +107,7 @@
     "last": {
       "batches": [
         {
-          "number": 2,
+          "number": 1,
           "start": 642,
           "end": 672,
           "frames": 31,
@@ -115,7 +115,7 @@
           "priority": "1"
         },
         {
-          "number": 3,
+          "number": 2,
           "start": 702,
           "end": 755,
           "frames": 54,
@@ -123,7 +123,7 @@
           "priority": "1"
         },
         {
-          "number": 1,
+          "number": 3,
           "start": 534,
           "end": 600,
           "frames": 67,
@@ -131,7 +131,7 @@
           "priority": "1"
         },
         {
-          "number": 6,
+          "number": 4,
           "start": 1059,
           "end": 1130,
           "frames": 72,
@@ -147,7 +147,7 @@
           "priority": "null"
         },
         {
-          "number": 4,
+          "number": 6,
           "start": 795,
           "end": 869,
           "frames": 75,
@@ -163,17 +163,17 @@
           "priority": "null"
         }
       ],
-      "saved_at": "2026-03-19T19:36:55.889223",
+      "saved_at": "2026-04-17T20:15:49.722783",
       "total_frames": 427,
       "batch_count": 7
     }
   },
   "current_render": {
-    "project_name": "TOR_CrimsonDesert",
+    "project_name": "TOR_Pragmata",
     "blend_file": "/Users/me/Podcast/3D-Animation/WIP - Blender/Delivery/FILE ANIM/TOR_caseSwap.blend",
-    "log_file": "/Users/me/Podcast/3D-Animation/Repos/Blender-Render-Util/renders/TOR_CrimsonDesert_2026-03-19_19-36-55/TOR_CrimsonDesert_2026-03-19_19-36-55_render_log.txt",
-    "output_dir": "/Users/me/Podcast/3D-Animation/Repos/Blender-Render-Util/renders/TOR_CrimsonDesert_2026-03-19_19-36-55",
-    "timestamp": "2026-03-19_19-36-55",
+    "log_file": "/Users/me/Podcast/3D-Animation/Repos/Blender-Render-Util/renders/TOR_Pragmata_2026-04-17_20-15-49/TOR_Pragmata_2026-04-17_20-15-49_render_log.txt",
+    "output_dir": "/Users/me/Podcast/3D-Animation/Repos/Blender-Render-Util/renders/TOR_Pragmata_2026-04-17_20-15-49",
+    "timestamp": "2026-04-17_20-15-49",
     "configured_batches": [
       {
         "number": 1,
