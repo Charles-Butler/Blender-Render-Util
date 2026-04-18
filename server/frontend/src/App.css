@@ -318,6 +318,66 @@ body {
   border: 2px solid #e5e7eb;
 }
 
+.log-info-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.log-info-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.log-info-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.log-info-label {
+  font-weight: 600;
+  color: #6b7280;
+  min-width: 80px;
+}
+
+.log-info-value {
+  color: #374151;
+  flex: 1;
+}
+
+.log-filename {
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  color: #059669;
+}
+
+/* Settings icon button */
+.btn-icon-settings {
+  background: none;
+  border: none;
+  color: #6b7280;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-icon-settings:hover {
+  color: #374151;
+  transform: rotate(30deg);
+}
+
+.btn-icon-settings:active {
+  transform: rotate(30deg) scale(0.95);
+}
+
 .log-info-header {
   display: flex;
   align-items: center;

@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faFolderOpen, faGlobe, faChartBar, faTriangleExclamation,
   faChartLine, faStopwatch, faClock, faBolt, faLevelDown,
-  faCheckCircle, faFileLines, faFilm
+  faCheckCircle, faFileLines, faFilm, faGear
 } from '@fortawesome/free-solid-svg-icons'
 import '../App.css'
 
@@ -141,6 +141,14 @@ function ProgressMonitor({ renderState, connected }) {
       console.error('Failed to fetch log info:', error)
       setCurrentLogFile('Not monitoring')
     }
+  }
+
+  const getLogFilename = () => {
+    if (!currentLogFile || currentLogFile === 'Not monitoring') {
+      return 'Not monitoring'
+    }
+    // Extract filename from path
+    return currentLogFile.split('/').pop()
   }
 
   const handleSwitchLogFile = async (logFilePath) => {
@@ -376,19 +384,27 @@ function ProgressMonitor({ renderState, connected }) {
 
         {/* Log File Info Section */}
         <div className="card full-width log-info-section">
-          <div className="log-info-header">
-            <div className="log-label">
-              <FontAwesomeIcon icon={faFileLines} /> Currently Monitoring:
-            </div>
-            <div className="log-path">
-              {currentLogFile}
+          <div className="log-info-header-row">
+            <div className="card-title">
+              <FontAwesomeIcon icon={faFileLines} /> Currently Monitoring
             </div>
             <button
-              className="btn-override"
+              className="btn-icon-settings"
               onClick={() => setShowFilePicker(true)}
+              title="Switch Render"
             >
-              Switch Render
+              <FontAwesomeIcon icon={faGear} />
             </button>
+          </div>
+          <div className="log-info-content">
+            <div className="log-info-row">
+              <span className="log-info-label">Project:</span>
+              <span className="log-info-value">{renderState.project_name || 'Unknown Project'}</span>
+            </div>
+            <div className="log-info-row">
+              <span className="log-info-label">Log File:</span>
+              <span className="log-info-value log-filename">'{getLogFilename()}'</span>
+            </div>
           </div>
         </div>
       </div>

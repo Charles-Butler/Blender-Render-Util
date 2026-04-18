@@ -101,7 +101,13 @@ class LogMonitor:
         """Start polling the log file for changes"""
         def poll_loop():
             while self.running:
-                self.process_new_lines()
+                try:
+                    self.process_new_lines()
+                except Exception as e:
+                    print(f"❌ Critical error in poll loop: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    # Continue running despite errors
                 time.sleep(0.5)  # Poll every 500ms
 
         poll_thread = threading.Thread(target=poll_loop, daemon=True)
@@ -249,13 +255,25 @@ class LogMonitor:
             with open(self.log_file, 'r') as f:
                 f.seek(self.last_position)
                 new_lines = f.readlines()
-                self.last_position = f.tell()
+
+                # Update position AFTER successfully reading
+                if new_lines:
+                    self.last_position = f.tell()
 
                 for line in new_lines:
-                    self.parse_line(line.strip())
+                    try:
+                        self.parse_line(line.strip())
+                    except Exception as parse_error:
+                        print(f"Error parsing line: {parse_error}")
+                        import traceback
+                        traceback.print_exc()
 
+        except FileNotFoundError:
+            print(f"⚠️  Log file not found: {self.log_file}")
         except Exception as e:
-            print(f"Error processing new lines: {e}")
+            print(f"❌ Error processing new lines: {e}")
+            import traceback
+            traceback.print_exc()
 
     def parse_line(self, line: str):
         """Parse a single log line and extract information"""
