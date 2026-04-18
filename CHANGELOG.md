@@ -5,6 +5,73 @@ All notable changes to Blender Batch Render Utilities will be documented in this
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.2.0] - 2026-04-18
+
+### Fixed
+- **Overall Progress resets to 0% on new render** — `start_render` now clears all stale state (frames completed, progress, priority lists, ETAs) from the previous render before applying new render values
+- **Elapsed time showing negative values** — `end_time` from a completed render was not cleared when a new render started, causing `end_time - start_time` to go negative once the new `start_time` was set; both fields are now reset on render start
+- **Frontend guard** — Added `Math.max(0, ...)` to elapsed time calculation as a safety net against any future stale timestamp edge cases
+
+---
+
+## [4.1.0] - 2026-03-01
+
+### Added
+- **Automatic State Restoration on Server Restart**
+  - Server startup loads render configuration from `config.json`
+  - Automatically starts log monitor if status is "rendering"
+  - Seamless recovery from server restarts during active renders
+  - No manual intervention required to resume monitoring
+
+- **Real-Time Batch Status Badges**
+  - High Priority and Low Priority lists show per-batch status
+  - "Rendering" badge (orange gradient) with film icon for active batch
+  - "Pending" badge (blue gradient) with clock icon for queued batches
+
+### Fixed
+- Monitor correctly identifies when pre-configured batches begin rendering
+- `current_batch` number updates properly when switching between batches
+- Existing batch detection now sets batch number from batch metadata
+- All configured batches appear in priority lists immediately on page load (not just after detection)
+
+---
+
+## [4.0.0] - 2026-03-01
+
+### Added
+- **Complete Render Workflow from Web UI**
+  - Start render jobs directly from Configure page via API
+  - AppleScript integration launches Terminal with render command
+  - Automatic log file creation and monitoring activation
+  - Cancel running render jobs with single button click
+
+- **Batch Profile System**
+  - Save and load batch configurations; `last` profile auto-saved on render start
+  - Load Last Profile button in Frame Selection
+  - API endpoints: `/api/batch-profiles`, `/api/batch-profiles/{name}` (POST/DELETE)
+
+- **Static Configuration Storage**
+  - Frame selections persisted in `config.json`
+  - `current_render` object stores active render state (project, batches, status, log path)
+  - Server startup automatically restores render state from config
+  - Blend file browser with recent files tracking
+
+- **Monitor Tab Access Control**
+  - Monitor tab disabled when status is `idle`
+  - Auto-redirect from Monitor to Configure when render completes
+  - Tooltip: "Start a render to access Monitor"
+
+- **Configure Page Live Updates**
+  - Batches update in real-time via WebSocket during rendering
+  - Read-only mode with status badges when render is active
+
+### Fixed
+- Circular reference issue in batch state merging
+- Current batch number properly tracks when pre-configured batches begin rendering
+- Low priority correctly handles both `'null'` and `'0'` values
+
+---
+
 ## [3.2.0] - 2026-03-01
 
 ### Added
