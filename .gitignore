@@ -59,3 +59,7 @@ ENV/
 *.swp
 *.swo
 *~
+
+# Runtime config (contains machine-specific paths and active render state)
+# Use server/config.template.json as a reference
+server/config.json

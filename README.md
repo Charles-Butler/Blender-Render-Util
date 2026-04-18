@@ -699,17 +699,3 @@ git push origin develop
 - [ ] Pause/resume batch rendering
 - [ ] Historical render statistics and analytics
 
-⏺ Here are the commands to restart both servers:
-
-Backend Server (port 8081):
-cd /Users/me/Podcast/3D-Animation/Repos/Blender-Render-Util/server && python3 app.py --port 8081 --logfile
-/Users/me/Podcast/3D-Animation/Repos/renders/005_TOR_RER_2026-02-27_18-07-23/005_TOR_RER_2026-02-27_18-07-23_render_log.txt --project
-"005_TOR_RER" --batches 8 --frames 527 > /tmp/server.log 2>&1 &
-
-Frontend Server (port 5173):
-cd /Users/me/Podcast/3D-Animation/Repos/Blender-Render-Util/server/frontend && npm run dev -- --host 0.0.0.0 > /tmp/vite.log 2>&1 &
-
-Then access the dashboard at:
-
-- Local: http://localhost:5173/
-- Network: http://192.168.0.147:5173/
