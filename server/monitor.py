@@ -280,27 +280,6 @@ class LogMonitor:
         if not line:
             return
 
-        # Check for batch name (appears after batch_start line)
-        name_match = self.patterns['batch_name'].search(line)
-        if name_match and self.state['batches']:
-            # Update the last batch with the name
-            batch_name = name_match.group(1).strip()
-            self.state['batches'][-1]['name'] = batch_name
-            self.state['current_batch_name'] = batch_name
-
-            # Also check for priority on this line (in case it wasn't on the batch_start line)
-            priority_match = self.patterns['batch_priority'].search(line)
-            if priority_match:
-                priority_raw = priority_match.group(1)
-                # Normalize: '1' or 'H' = high priority, everything else = low priority
-                priority = '1' if priority_raw in ('1', 'H') else '0'
-                self.state['batches'][-1]['priority'] = priority
-                self.state['current_batch_priority'] = priority
-                # Re-send batch stats with updated priority
-                self._send_batch_stats()
-
-            return
-
         # Check for batch start
         match = self.patterns['batch_start'].search(line)
         if match:
