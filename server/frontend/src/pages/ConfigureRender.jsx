@@ -70,7 +70,7 @@ function ConfigureRender({
 
   const fetchConfig = async () => {
     try {
-      const response = await fetch('http://localhost:8081/api/config');
+      const response = await fetch('/api/config');
       const data = await response.json();
       if (data.status === 'ok') {
         setProjectName(data.config.render.last_project_name || '');
@@ -82,7 +82,7 @@ function ConfigureRender({
 
   const fetchRecentFiles = async () => {
     try {
-      const response = await fetch('http://localhost:8081/api/blend-files');
+      const response = await fetch('/api/blend-files');
       const data = await response.json();
       if (data.status === 'ok') {
         setRecentFiles(data.recent_files || []);
@@ -95,7 +95,7 @@ function ConfigureRender({
 
   const fetchRenderState = async () => {
     try {
-      const response = await fetch('http://localhost:8081/api/status');
+      const response = await fetch('/api/status');
       const data = await response.json();
       if (data.status === 'ok' && data.render_state) {
         const state = data.render_state;
@@ -126,7 +126,7 @@ function ConfigureRender({
 
   const handleBrowseFiles = async () => {
     try {
-      const response = await fetch('http://localhost:8081/api/blend-files/browse');
+      const response = await fetch('/api/blend-files/browse');
       const data = await response.json();
       if (data.status === 'ok') {
         setAvailableFiles(data.blend_files || []);
@@ -144,7 +144,7 @@ function ConfigureRender({
 
     // Add to recent files
     try {
-      await fetch('http://localhost:8081/api/blend-files/add', {
+      await fetch('/api/blend-files/add', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ filepath })
@@ -205,7 +205,7 @@ function ConfigureRender({
 
   const handleLoadLastProfile = async () => {
     try {
-      const response = await fetch('http://localhost:8081/api/batch-profiles/last');
+      const response = await fetch('/api/batch-profiles/last');
       const data = await response.json();
 
       if (data.status === 'ok' && data.profile) {
