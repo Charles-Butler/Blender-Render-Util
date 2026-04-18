@@ -464,6 +464,10 @@ The script will automatically detect running Blender processes and offer to moni
   - Fixes overall progress showing 100% when configuring a new render after a completed one
   - Fixes elapsed time displaying negative values (e.g. `-630:-53:-17`) caused by stale `end_time` surviving into the new render session
   - Frontend guard added (`Math.max(0, ...)`) as a safety net against future stale timestamp edge cases
+- **"Frame X outside batch range" error on batch transition**:
+  - `batch_name` regex matched the same log line as `batch_start` and was evaluated first, silently skipping `batch_start` for every batch after the first
+  - `batch_start_frame`/`batch_end_frame` were never updated on batch transitions, causing negative batch progress and the spurious "outside batch range" warning
+  - Removed the redundant `batch_name` early-return block — name and priority extraction already handled inside `batch_start`
 
 ---
 

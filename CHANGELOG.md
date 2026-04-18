@@ -5,6 +5,11 @@ All notable changes to Blender Batch Render Utilities will be documented in this
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.2.1] - 2026-04-18
+
+### Fixed
+- **"Frame X outside batch range" error on batch transition** — `batch_name` pattern matched the same `"Now Rendering X: N - M"` log line as `batch_start` and was checked first, causing an early return that silently skipped `batch_start` for every batch after the first; `batch_start_frame`/`batch_end_frame` were never updated, making frame progress calculations negative against the stale previous batch range. Removed the redundant `batch_name` block — name and priority are already extracted inside `batch_start`.
+
 ## [4.2.0] - 2026-04-18
 
 ### Fixed
