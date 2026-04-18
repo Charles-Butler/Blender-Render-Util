@@ -38,6 +38,7 @@ app.add_middleware(
 )
 
 # Global state
+_server_port: int = 8081  # Updated by main() before uvicorn starts
 monitor: Optional[LogMonitor] = None
 current_log_file: str = ""
 render_state: Dict[str, Any] = {
@@ -95,8 +96,8 @@ manager = ConnectionManager()
 @app.get("/")
 async def root():
     """Serve the main HTML page"""
-    static_dir = Path(__file__).parent / "static"
-    index_path = static_dir / "index.html"
+    dist_dir = Path(__file__).parent / "frontend" / "dist"
+    index_path = dist_dir / "index.html"
 
     if index_path.exists():
         return FileResponse(
@@ -108,7 +109,7 @@ async def root():
             }
         )
     else:
-        # Return simple status page if no HTML exists yet
+        # Return simple status page if frontend hasn't been built yet
         return HTMLResponse(content=f"""
         <html>
             <head><title>Blender Render Monitor</title></head>
@@ -842,8 +843,8 @@ async def startup_event():
 
     print(f"Hostname: {hostname}")
     print(f"Local IP: {local_ip}")
-    print(f"Server: http://localhost:8080")
-    print(f"Network: http://{local_ip}:8080")
+    print(f"Server: http://localhost:{_server_port}")
+    print(f"Network: http://{local_ip}:{_server_port}")
     print("="*60)
 
     # Load current render configuration from config.json
@@ -1066,7 +1067,7 @@ def seconds_to_time_str(seconds: int) -> str:
 def main():
     parser = argparse.ArgumentParser(description="Blender Render Monitor Server")
     parser.add_argument("--logfile", type=str, help="Path to render log file")
-    parser.add_argument("--port", type=int, default=8080, help="Port to run server on")
+    parser.add_argument("--port", type=int, default=8081, help="Port to run server on")
     parser.add_argument("--host", type=str, default="0.0.0.0", help="Host to bind to")
     parser.add_argument("--project", type=str, help="Project name")
     parser.add_argument("--batches", type=int, help="Total number of batches")
@@ -1113,6 +1114,10 @@ def main():
         config = get_config()
         config.set('monitoring', 'current_log_file', value=args.logfile)
 
+    # Expose port globally so startup_event can print it
+    global _server_port
+    _server_port = args.port
+
     # Run server
     uvicorn.run(
         app,
@@ -1121,6 +1126,13 @@ def main():
         log_level="info",
         access_log=False  # Reduce noise
     )
+
+
+# Serve pre-built React frontend — must be mounted AFTER all API routes
+# so that API paths take precedence over the static file handler
+_dist_dir = Path(__file__).parent / "frontend" / "dist"
+if _dist_dir.exists():
+    app.mount("/", StaticFiles(directory=str(_dist_dir), html=True), name="static")
 
 
 if __name__ == "__main__":
