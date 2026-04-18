@@ -90,7 +90,7 @@ function ProgressMonitor({ renderState, connected }) {
 
   const formatElapsedTime = (startTime) => {
     if (!startTime) return '00:00:00'
-    const elapsed = Math.floor(Date.now() / 1000 - startTime)
+    const elapsed = Math.max(0, Math.floor(Date.now() / 1000 - startTime))
     const hours = Math.floor(elapsed / 3600)
     const mins = Math.floor((elapsed % 3600) / 60)
     const secs = elapsed % 60

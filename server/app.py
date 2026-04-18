@@ -537,6 +537,27 @@ async def start_render(render_config: Dict[str, Any]):
         monitor = LogMonitor(str(log_file), update_render_state)
         monitor.start()
 
+        # Reset stale state from any previous render before applying new values
+        render_state["frames_completed"] = 0
+        render_state["overall_progress"] = 0
+        render_state["batch_progress"] = 0
+        render_state["current_batch"] = 0
+        render_state["current_frame"] = 0
+        render_state["batch_start_frame"] = 0
+        render_state["batch_end_frame"] = 0
+        render_state["start_time"] = None
+        render_state["end_time"] = None
+        render_state["high_priority_list"] = []
+        render_state["low_priority_list"] = []
+        render_state["completed_list"] = []
+        render_state["high_priority_batches"] = 0
+        render_state["low_priority_batches"] = 0
+        render_state["completed_batches"] = 0
+        render_state["batch_eta"] = '00:00:00'
+        render_state["overall_eta"] = '00:00:00'
+        render_state["frame_time"] = 0
+        render_state["avg_frame_time"] = 0
+
         # Update render state
         render_state["log_file"] = str(log_file)
         render_state["project_name"] = project_name
