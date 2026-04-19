@@ -223,6 +223,61 @@ class LogMonitor:
                     if has_incomplete:
                         self.callback({'status': 'rendering'})
 
+                        # Broadcast current batch info — _read_existing_content sets
+                        # self.state locally but never pushes it to render_state via callback,
+                        # so current_batch stays 0 on the frontend after a server restart.
+                        current = next(
+                            (b for b in self.state['batches'] if not b['completed']), None
+                        )
+                        if current:
+                            self.callback({
+                                'current_batch':     current['number'],
+                                'batch_start_frame': current['start'],
+                                'batch_end_frame':   current['end'],
+                            })
+
+                            # Restore current frame + timing by scanning the last
+                            # Fra: lines within the current batch range.
+                            # _read_existing_content only greps Append/Finished lines,
+                            # so current_frame stays 0 on restart without this.
+                            try:
+                                fra_result = subprocess.run(
+                                    ['grep', 'Fra:', str(self.log_file)],
+                                    capture_output=True, text=True
+                                )
+                                if fra_result.returncode == 0 and fra_result.stdout.strip():
+                                    fra_lines = fra_result.stdout.strip().split('\n')
+                                    recent_times = []
+
+                                    # Walk backward to find last frame in current batch range
+                                    for line in reversed(fra_lines):
+                                        match = self.patterns['frame_progress'].search(line)
+                                        if match:
+                                            frame = int(match.group(1))
+                                            if current['start'] <= frame <= current['end']:
+                                                frame_seconds = self._time_to_seconds(match.group(2))
+                                                if self.state['current_frame'] == 0:
+                                                    # First (most recent) hit — use as current frame
+                                                    self.state['current_frame'] = frame
+                                                    self.state['frame_times'].append(frame_seconds)
+                                                    recent_times.append(frame_seconds)
+                                                else:
+                                                    recent_times.append(frame_seconds)
+                                                    if len(recent_times) >= 10:
+                                                        break
+
+                                    if self.state['current_frame'] > 0:
+                                        avg = sum(recent_times) / len(recent_times)
+                                        self.callback({
+                                            'current_frame':  self.state['current_frame'],
+                                            'frame_time':     recent_times[0],
+                                            'avg_frame_time': avg,
+                                        })
+                                        print(f"✓ Restored frame: {self.state['current_frame']} "
+                                              f"(avg {avg:.1f}s from {len(recent_times)} samples)")
+                            except Exception as e:
+                                print(f"⚠️  Could not restore frame progress: {e}")
+
                     # Set start time from log filename timestamp (e.g., 2026-02-27_18-07-23)
                     import time
                     import re
