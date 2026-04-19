@@ -485,7 +485,7 @@ The script will automatically detect running Blender processes and offer to moni
   - `websockets` added to `requirements.txt`
   - All hardcoded paths removed from `QUICKSTART.md`
 
-### v5.0 - Self-Contained Server Architecture _(Current)_
+### v5.0 - Self-Contained Server Architecture
 
 - **Frontend served by FastAPI directly**:
   - React app pre-built via `npm run build` — no Vite dev server at runtime
@@ -496,6 +496,16 @@ The script will automatically detect running Blender processes and offer to moni
   - WebSocket uses `window.location.host` — works on any port or hostname
   - Foundation for PyWebView packaging (Phase 2)
 - **Default port unified to `8081`**
+
+### v5.1 - Native Desktop App Launcher _(Current)_
+
+- **`app/launcher.py`** — Native desktop window via PyWebView:
+  - Starts FastAPI backend in a daemon thread, no terminal visible to user
+  - Polls `/health` before opening UI (15s timeout)
+  - Native OS window at 1280×820, resizable, no browser chrome
+  - Accepts `--blend-file` arg from Blender add-on to pre-select blend file
+  - Clean shutdown when window is closed
+- **`pywebview` added to requirements**
 
 ---
 
