@@ -104,7 +104,7 @@ function Navigation({ currentPage, onNavigate, renderStatus, canNavigate }) {
 
           {/* Version Footer */}
           <div className="nav-footer">
-            <div className="version-info">v5.1.0</div>
+            <div className="version-info">v5.2.1</div>
           </div>
         </div>
       </nav>

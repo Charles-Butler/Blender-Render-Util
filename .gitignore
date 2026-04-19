@@ -63,3 +63,13 @@ ENV/
 # Runtime config (contains machine-specific paths and active render state)
 # Use server/config.template.json as a reference
 server/config.json
+
+# PyInstaller build artifacts
+app/build/
+app/dist/
+
+# Built React frontend (generated — run npm run build to recreate)
+server/frontend/dist/
+
+# Node modules
+server/frontend/node_modules/

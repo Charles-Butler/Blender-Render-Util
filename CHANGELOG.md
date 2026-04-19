@@ -5,6 +5,40 @@ All notable changes to Blender Batch Render Utilities will be documented in this
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.2.1] - 2026-04-17
+
+### Fixed
+- **Post-restart frame state restoration** in `monitor.py`: server restart no longer shows
+  "Frame 0" and blank statistics. On startup, `_read_existing_content()` now greps `Fra:`
+  lines to find the most recent frame within the active batch range, broadcasts
+  `current_frame`, `frame_time`, and `avg_frame_time` via callback (up to 10 samples for
+  the average), and prints a confirmation line to the server log.
+
+---
+
+## [5.2.0] - 2026-04-17
+
+### Added
+- **PyInstaller Bundle** (`app/RenderManager.spec`)
+  - Bundles Python runtime, FastAPI, uvicorn, pywebview, watchdog, websockets
+  - Bundles pre-built React frontend (`server/frontend/dist/`)
+  - Bundles `batchedFrame_render.sh` and `config.template.json`
+  - Produces native `RenderManager.app` for macOS
+  - `CFBundleIdentifier`: `com.renderutil.rendermanager`
+  - Supports dark mode (`NSRequiresAquaSystemAppearance: False`)
+- **Build Script** (`app/build.sh`)
+  - Single command builds entire app: `npm run build` → PyInstaller
+  - Uses `python3 -m PyInstaller` for reliable PATH-agnostic execution
+- **Persistent Config Storage for Bundle**
+  - Bundled app stores `config.json` in `~/Library/Application Support/RenderManager/`
+  - `config_manager.py` respects `RENDER_MANAGER_CONFIG_DIR` env var set by launcher
+
+### Fixed
+- Render script path in `app.py` now uses `sys._MEIPASS` when frozen instead of
+  looking for a sibling `Blender-Utilities` repo — works correctly inside `.app` bundle
+
+---
+
 ## [5.1.0] - 2026-04-18
 
 ### Added

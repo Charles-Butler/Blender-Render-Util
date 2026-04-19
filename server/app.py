@@ -25,7 +25,7 @@ from config_manager import get_config
 app = FastAPI(
     title="Blender Render Monitor",
     description="Real-time monitoring for Blender batch rendering",
-    version="5.1.0"
+    version="5.2.1"
 )
 
 # Enable CORS for development
@@ -192,7 +192,7 @@ async def websocket_endpoint(websocket: WebSocket):
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
-    return {"status": "healthy", "version": "5.1.0"}
+    return {"status": "healthy", "version": "5.2.1"}
 
 
 @app.get("/api/config")
@@ -447,8 +447,13 @@ async def start_render(render_config: Dict[str, Any]):
         print(f"✓ Created render config at: {temp_config_path}")
         print(f"✓ Config: {json.dumps(config_data, indent=2)}")
 
-        # Path to the render script (in Blender-Utilities repo)
-        script_dir = Path(__file__).parent.parent.parent / "Blender-Utilities"
+        # Locate render script — bundled app uses sys._MEIPASS, dev uses repo root
+        import sys as _sys
+        if getattr(_sys, 'frozen', False):
+            script_dir = Path(_sys._MEIPASS)
+        else:
+            script_dir = Path(__file__).parent.parent
+
         render_script = script_dir / "batchedFrame_render.sh"
 
         if not render_script.exists():

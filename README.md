@@ -497,7 +497,7 @@ The script will automatically detect running Blender processes and offer to moni
   - Foundation for PyWebView packaging (Phase 2)
 - **Default port unified to `8081`**
 
-### v5.1 - Native Desktop App Launcher _(Current)_
+### v5.1 - Native Desktop App Launcher
 
 - **`app/launcher.py`** — Native desktop window via PyWebView:
   - Starts FastAPI backend in a daemon thread, no terminal visible to user
@@ -506,6 +506,22 @@ The script will automatically detect running Blender processes and offer to moni
   - Accepts `--blend-file` arg from Blender add-on to pre-select blend file
   - Clean shutdown when window is closed
 - **`pywebview` added to requirements**
+
+### v5.2.1 - Post-Restart State Restoration _(Current)_
+
+- Fixed "Frame 0 / blank statistics" bug after server restart
+- `monitor.py` now greps `Fra:` lines on startup to restore `current_frame`,
+  `frame_time`, and `avg_frame_time` for the active batch
+
+### v5.2 - PyInstaller macOS Bundle
+
+- **`app/RenderManager.spec`** — PyInstaller bundle definition:
+  - Packages Python runtime, all dependencies, and pre-built React frontend
+  - Produces a standalone `RenderManager.app` — no Python, Node, or terminal required
+  - Persistent config stored in `~/Library/Application Support/RenderManager/`
+  - Dark mode support, proper macOS bundle metadata
+- **`app/build.sh`** — single command builds the full app
+- Render script path fixed for bundle mode (`sys._MEIPASS` when frozen)
 
 ---
 
