@@ -111,7 +111,7 @@ def main():
     args = parser.parse_args()
 
     print('=' * 50)
-    print('  Render Manager v5.2.0')
+    print('  Render Manager v5.2.1')
     print('=' * 50)
 
     # Start backend

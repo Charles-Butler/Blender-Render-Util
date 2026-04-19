@@ -507,7 +507,13 @@ The script will automatically detect running Blender processes and offer to moni
   - Clean shutdown when window is closed
 - **`pywebview` added to requirements**
 
-### v5.2 - PyInstaller macOS Bundle _(Current)_
+### v5.2.1 - Post-Restart State Restoration _(Current)_
+
+- Fixed "Frame 0 / blank statistics" bug after server restart
+- `monitor.py` now greps `Fra:` lines on startup to restore `current_frame`,
+  `frame_time`, and `avg_frame_time` for the active batch
+
+### v5.2 - PyInstaller macOS Bundle
 
 - **`app/RenderManager.spec`** — PyInstaller bundle definition:
   - Packages Python runtime, all dependencies, and pre-built React frontend

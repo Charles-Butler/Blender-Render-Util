@@ -5,7 +5,18 @@ All notable changes to Blender Batch Render Utilities will be documented in this
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [5.2.0] - 2026-04-19
+## [5.2.1] - 2026-04-17
+
+### Fixed
+- **Post-restart frame state restoration** in `monitor.py`: server restart no longer shows
+  "Frame 0" and blank statistics. On startup, `_read_existing_content()` now greps `Fra:`
+  lines to find the most recent frame within the active batch range, broadcasts
+  `current_frame`, `frame_time`, and `avg_frame_time` via callback (up to 10 samples for
+  the average), and prints a confirmation line to the server log.
+
+---
+
+## [5.2.0] - 2026-04-17
 
 ### Added
 - **PyInstaller Bundle** (`app/RenderManager.spec`)
