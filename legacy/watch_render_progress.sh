@@ -55,24 +55,31 @@ display_height=18  # Number of lines in progress display (increased for dual bar
 total_frames_rendered=${PRESCANNED_FRAMES:-0}  # Start with prescanned count if available
 completed_frames_list=""  # Track completed frames as space-separated string (bash 3 compatible)
 
+# Check if there's an argument (log file path) - do this FIRST before checking stdin
+if [ -n "$1" ] && [ "$1" != "--piped" ]; then
+    LOG_FILE="$1"
+    if [ ! -f "$LOG_FILE" ]; then
+        echo "❌ Log file not found: $LOG_FILE"
+        exit 1
+    fi
+
+    # Get the absolute path of this script
+    SCRIPT_PATH="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
+
+    echo "📊 Monitoring: $LOG_FILE"
+    echo "================================================================"
+    echo
+
+    # First, output the log header (first 20 lines) to detect batch info,
+    # then follow with tail -f for new content
+    exec bash -c "head -20 '$LOG_FILE' && tail -f '$LOG_FILE'" | bash "$SCRIPT_PATH" --piped
+fi
+
 # Check if input is piped or if we need to prompt for log file
 if [ -t 0 ]; then
     # No piped input - prompt for log file or auto-detect
     echo "No input piped. Searching for active render logs..."
     echo
-
-    # Check if there's an argument (log file path)
-    if [ -n "$1" ] && [ "$1" != "--piped" ]; then
-        LOG_FILE="$1"
-        if [ ! -f "$LOG_FILE" ]; then
-            echo "❌ Log file not found: $LOG_FILE"
-            exit 1
-        fi
-        echo "📊 Monitoring: $LOG_FILE"
-        echo "================================================================"
-        echo
-        exec tail -f "$LOG_FILE" | bash "$0" --piped
-    fi
 
     # Find all render logs (compatible with older bash)
     ALL_LOGS=()
@@ -186,8 +193,11 @@ if [ -t 0 ]; then
     # Export the completed count so the monitoring process can use it
     export PRESCANNED_FRAMES="$COMPLETED_COUNT"
 
+    # Get the absolute path of this script
+    SCRIPT_PATH="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
+
     # Tail the log file and pipe to ourselves
-    exec tail -f "$LOG_FILE" | bash "$0" --piped
+    exec tail -f "$LOG_FILE" | bash "$SCRIPT_PATH" --piped
 fi
 
 # If --piped flag is present, we're in the second invocation, proceed normally
@@ -231,8 +241,8 @@ seconds_to_time() {
 detect_batch() {
     local line=$1
 
-    # Match pattern like "🎬 Now Rendering Scenes: 973 - 999" or "Now Rendering Scenes: 973 - 999"
-    if [[ $line =~ Now\ Rendering\ Scenes:\ ([0-9]+)\ -\ ([0-9]+) ]]; then
+    # Match pattern like "🎬 Now Rendering RemoteClick: 642 - 672" or "Now Rendering Batch 2: 973 - 999"
+    if [[ $line =~ Now\ Rendering\ [^:]+:\ ([0-9]+)\ -\ ([0-9]+) ]]; then
         local start_raw=${BASH_REMATCH[1]}
         local end_raw=${BASH_REMATCH[2]}
 
@@ -421,7 +431,7 @@ update_progress() {
 detect_completion() {
     local line=$1
 
-    if [[ $line =~ Finished\ Scenes:\ ([0-9]+)\ -\ ([0-9]+) ]]; then
+    if [[ $line =~ Finished\ [^:]+:\ ([0-9]+)\ -\ ([0-9]+) ]]; then
         local total_batch_time=$(($(date +%s) - batch_start_time))
         echo "════════════════════════════════════════════════════════════════"
         echo "✅ BATCH #$current_batch COMPLETE!"

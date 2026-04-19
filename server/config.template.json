@@ -1,0 +1,34 @@
+{
+  "blender": {
+    "executable_path": "/Applications/Blender.app/Contents/MacOS/Blender",
+    "last_blend_file": "",
+    "recent_blend_files": []
+  },
+  "render": {
+    "last_project_name": "",
+    "default_output_dir": "./renders",
+    "last_batch_count": 1
+  },
+  "server": {
+    "default_port": 8081,
+    "host": "0.0.0.0"
+  },
+  "ui": {
+    "theme": "dark",
+    "auto_start_monitoring": true
+  },
+  "monitoring": {
+    "current_log_file": "",
+    "active_render": {}
+  },
+  "current_render": {
+    "project_name": "",
+    "blend_file": "",
+    "log_file": "",
+    "output_dir": "",
+    "timestamp": "",
+    "configured_batches": [],
+    "total_frames": 0,
+    "status": "idle"
+  }
+}

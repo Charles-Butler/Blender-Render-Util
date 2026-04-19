@@ -1,0 +1,5 @@
+fastapi
+uvicorn
+watchdog
+websockets
+pywebview
