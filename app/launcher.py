@@ -13,10 +13,22 @@ import argparse
 import urllib.request
 import urllib.error
 
-# Add the server directory to the path so we can import app.py
-APP_DIR = os.path.dirname(os.path.abspath(__file__))
-SERVER_DIR = os.path.join(os.path.dirname(APP_DIR), 'server')
-sys.path.insert(0, SERVER_DIR)
+# Resolve paths for both dev and PyInstaller bundle modes
+if getattr(sys, 'frozen', False):
+    # Inside .app bundle — all files extracted to sys._MEIPASS
+    BASE_DIR = sys._MEIPASS
+else:
+    # Running from source — server/ is one level up from app/
+    BASE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'server')
+
+BASE_DIR = os.path.abspath(BASE_DIR)
+sys.path.insert(0, BASE_DIR)
+
+# Config storage: use persistent user dir in bundle, local dir in dev
+if getattr(sys, 'frozen', False):
+    CONFIG_DIR = os.path.join(os.path.expanduser('~'), 'Library', 'Application Support', 'RenderManager')
+    os.makedirs(CONFIG_DIR, exist_ok=True)
+    os.environ['RENDER_MANAGER_CONFIG_DIR'] = CONFIG_DIR
 
 PORT = 8081
 HOST = '127.0.0.1'
@@ -99,7 +111,7 @@ def main():
     args = parser.parse_args()
 
     print('=' * 50)
-    print('  Render Manager v5.1.0')
+    print('  Render Manager v5.2.0')
     print('=' * 50)
 
     # Start backend

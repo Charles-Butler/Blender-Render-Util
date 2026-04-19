@@ -21,7 +21,12 @@ class ConfigManager:
             config_path: Path to config file (defaults to config.json in same directory)
         """
         if config_path is None:
-            config_path = Path(__file__).parent / "config.json"
+            import os
+            config_dir = os.environ.get('RENDER_MANAGER_CONFIG_DIR')
+            if config_dir:
+                config_path = Path(config_dir) / "config.json"
+            else:
+                config_path = Path(__file__).parent / "config.json"
 
         self.config_path = config_path
         self.config = self._load_config()

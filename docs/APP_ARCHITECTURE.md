@@ -107,7 +107,7 @@ Changes to existing files so the app is self-contained and port-agnostic before 
 
 ---
 
-### Phase 3 — PyInstaller Bundle
+### Phase 3 — PyInstaller Bundle ✅ _(Complete)_
 
 **`app/RenderManager.spec`** bundles:
 - Python runtime
