@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Blender Batch Render Script with Interactive Queue System
-# Version 4.3.0 - Web-managed via Blender Render Util server
+# Version 5.0.0 - Web-managed via Blender Render Util server
 
 echo "================================================================"
 echo "        Blender Batch Render - Interactive Queue System"

@@ -469,7 +469,7 @@ The script will automatically detect running Blender processes and offer to moni
   - `batch_start_frame`/`batch_end_frame` were never updated on batch transitions, causing negative batch progress and the spurious "outside batch range" warning
   - Removed the redundant `batch_name` early-return block — name and priority extraction already handled inside `batch_start`
 
-### v4.3 - Project Cleanup & Reorganization _(Current)_
+### v4.3 - Project Cleanup & Reorganization
 
 - **Removed Legacy & Redundant Files**:
   - `server/static/index.html` (v2.3.1 HTML dashboard — replaced by React frontend)
@@ -484,6 +484,18 @@ The script will automatically detect running Blender processes and offer to moni
   - `server/config.template.json` added for new installs
   - `websockets` added to `requirements.txt`
   - All hardcoded paths removed from `QUICKSTART.md`
+
+### v5.0 - Self-Contained Server Architecture _(Current)_
+
+- **Frontend served by FastAPI directly**:
+  - React app pre-built via `npm run build` — no Vite dev server at runtime
+  - `frontend/dist/` mounted as static files, eliminating the two-terminal startup
+  - Single command to run the full app: `python3 app.py`
+- **Relative API URLs throughout frontend**:
+  - All `http://localhost:8081/api/...` replaced with `/api/...`
+  - WebSocket uses `window.location.host` — works on any port or hostname
+  - Foundation for PyWebView packaging (Phase 2)
+- **Default port unified to `8081`**
 
 ---
 
