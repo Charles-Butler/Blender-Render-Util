@@ -5,6 +5,20 @@ All notable changes to Blender Batch Render Utilities will be documented in this
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.1.0] - 2026-04-18
+
+### Added
+- **Native Desktop App Launcher** (`app/launcher.py`)
+  - Starts FastAPI backend in a daemon thread on `127.0.0.1:8081`
+  - Polls `/health` until server is ready (15s timeout) before opening UI
+  - Opens a native OS window via PyWebView — no browser, no terminal visible to user
+  - Window config: 1280×820 default, 900×600 minimum, resizable
+  - Accepts `--blend-file` CLI arg (passed from Blender add-on) to pre-select blend file in config
+  - Cleanly shuts down uvicorn when window is closed
+- **`pywebview` added to `server/requirements.txt`**
+
+---
+
 ## [5.0.0] - 2026-04-18
 
 ### Changed (Breaking — Architecture)
