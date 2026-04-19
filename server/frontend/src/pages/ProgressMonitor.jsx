@@ -18,7 +18,7 @@ function LogFilePicker({ onSelect, onClose }) {
 
   const fetchLogFiles = async () => {
     try {
-      const response = await fetch('http://localhost:8081/api/browse-log-files')
+      const response = await fetch('/api/browse-log-files')
       const data = await response.json()
 
       if (data.status === 'ok') {
@@ -122,7 +122,7 @@ function ProgressMonitor({ renderState, connected }) {
 
   const fetchLogInfo = async () => {
     try {
-      const response = await fetch('http://localhost:8081/api/status')
+      const response = await fetch('/api/status')
       const data = await response.json()
       if (data.status === 'ok' && data.render_state) {
         // Try to get log file from render state or config
@@ -130,7 +130,7 @@ function ProgressMonitor({ renderState, connected }) {
           setCurrentLogFile(data.render_state.log_file)
         } else {
           // Fallback to config
-          const configResponse = await fetch('http://localhost:8081/api/config')
+          const configResponse = await fetch('/api/config')
           const configData = await configResponse.json()
           if (configData.status === 'ok') {
             setCurrentLogFile(configData.config?.monitoring?.current_log_file || 'Not monitoring')
@@ -153,7 +153,7 @@ function ProgressMonitor({ renderState, connected }) {
 
   const handleSwitchLogFile = async (logFilePath) => {
     try {
-      const response = await fetch('http://localhost:8081/api/monitor/override', {
+      const response = await fetch('/api/monitor/override', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ logfile: logFilePath })

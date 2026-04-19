@@ -44,9 +44,7 @@ function App() {
     let reconnectTimeout = null
 
     const connect = () => {
-      // Use current hostname but port 8081 for WebSocket
-      const wsHost = window.location.hostname
-      const wsUrl = `ws://${wsHost}:8081/ws`
+      const wsUrl = `ws://${window.location.host}/ws`
       ws = new WebSocket(wsUrl)
 
       ws.onopen = () => {
@@ -103,7 +101,7 @@ function App() {
 
     try {
       // Call backend API to start render
-      const response = await fetch('http://localhost:8081/api/render/start', {
+      const response = await fetch('/api/render/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(config)
@@ -138,7 +136,7 @@ function App() {
     }
 
     try {
-      const response = await fetch('http://localhost:8081/api/render/cancel', {
+      const response = await fetch('/api/render/cancel', {
         method: 'POST'
       })
 
