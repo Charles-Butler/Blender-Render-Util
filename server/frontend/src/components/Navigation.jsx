@@ -104,7 +104,7 @@ function Navigation({ currentPage, onNavigate, renderStatus, canNavigate, onHelp
               <FontAwesomeIcon icon={faCircleQuestion} className="help-pill-icon" />
               <span>Help & Support</span>
             </button>
-            <div className="version-info">v5.3.0</div>
+            <div className="version-info">v5.3.1</div>
           </div>
         </div>
       </nav>

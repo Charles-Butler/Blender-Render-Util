@@ -509,7 +509,12 @@ The script will automatically detect running Blender processes and offer to moni
   - Clean shutdown when window is closed
 - **`pywebview` added to requirements**
 
-### v5.3.0 - Help Page, App Icon & Reconnect Flow _(Current)_
+### v5.3.1 - Progress Bar Fix _(Current)_
+
+- Fixed overall progress bar showing empty after manually selecting a log file
+- Fixed `total_frames` always 0 on first launch — now derived from log batches when config has no record of the render
+
+### v5.3.0 - Help Page, App Icon & Reconnect Flow
 
 - Help & Support page in the nav sidebar — troubleshooting, changelog, GitHub issues link
 - Custom app icon in macOS dock and app switcher

@@ -5,6 +5,18 @@ All notable changes to Blender Batch Render Utilities will be documented in this
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.3.1] - 2026-04-20
+
+### Fixed
+- **Overall progress bar empty after manually selecting a log** — `overall_progress` is now
+  recalculated immediately after `total_frames` is set in the log override endpoint, so the
+  progress bar fills correctly instead of showing `402 / 427` with an empty bar
+- **`total_frames` always 0 when selecting a log from the idle Monitor view** — if the app's
+  config doesn't know about the render (e.g. first launch), `total_frames` is now derived by
+  summing frame counts across all batches detected in the log file itself
+
+---
+
 ## [5.3.0] - 2026-04-20
 
 ### Added
