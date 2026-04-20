@@ -99,7 +99,7 @@ coll = COLLECT(
 app = BUNDLE(
     coll,
     name='RenderManager.app',
-    icon=None,          # Phase 3 placeholder — add .icns before release
+    icon=str(SPEC_DIR / 'RenderManager.icns'),
     bundle_identifier='com.renderutil.rendermanager',
     info_plist={
         'CFBundleName':              'Render Manager',
