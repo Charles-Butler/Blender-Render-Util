@@ -173,6 +173,38 @@ function ProgressMonitor({ renderState, connected }) {
     }
   }
 
+  // Idle reconnect view — shown when no render is active
+  if (renderState.status === 'idle') {
+    return (
+      <div className="progress-monitor">
+        <div className="container">
+          <div className="card full-width reconnect-card">
+            <div className="reconnect-icon">
+              <FontAwesomeIcon icon={faFolderOpen} />
+            </div>
+            <h2 className="reconnect-title">No Active Render</h2>
+            <p className="reconnect-subtitle">
+              If a render is already running, select its log file to pick up where you left off.
+            </p>
+            <button
+              className="btn-reconnect"
+              onClick={() => setShowFilePicker(true)}
+            >
+              <FontAwesomeIcon icon={faFolderOpen} /> Select a Render Log
+            </button>
+          </div>
+        </div>
+
+        {showFilePicker && (
+          <LogFilePicker
+            onSelect={handleSwitchLogFile}
+            onClose={() => setShowFilePicker(false)}
+          />
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="progress-monitor">
       <div className="container">

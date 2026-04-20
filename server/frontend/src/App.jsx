@@ -32,13 +32,6 @@ function App() {
     elapsed_time: '00:00:00'
   })
 
-  // Redirect from monitor to configure when status becomes idle
-  useEffect(() => {
-    if (currentPage === 'monitor' && renderState.status === 'idle') {
-      console.log('Status is idle, redirecting to configure page')
-      setCurrentPage('configure')
-    }
-  }, [currentPage, renderState.status])
 
   useEffect(() => {
     let ws = null

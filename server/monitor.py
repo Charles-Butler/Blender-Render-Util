@@ -63,10 +63,12 @@ class LogMonitor:
 
     def start(self):
         """Start monitoring the log file"""
+        if self.running:
+            return
+
         try:
             if not self.log_file.exists():
                 print(f"⚠️  Log file not found: {self.log_file}")
-                # Don't wait, just return - file might be created later
                 return
 
             self.running = True
@@ -75,16 +77,21 @@ class LogMonitor:
             self._read_existing_content()
 
             if WATCHDOG_AVAILABLE:
-                # Set up file watcher
-                self.file_handler = LogFileHandler(self.log_file, self.process_new_lines)
-                self.observer = Observer()
-                self.observer.schedule(
-                    self.file_handler,
-                    str(self.log_file.parent),
-                    recursive=False
-                )
-                self.observer.start()
-                print(f"📊 Monitoring log file (watchdog): {self.log_file}")
+                try:
+                    self.file_handler = LogFileHandler(self.log_file, self.process_new_lines)
+                    self.observer = Observer()
+                    self.observer.schedule(
+                        self.file_handler,
+                        str(self.log_file.parent),
+                        recursive=False
+                    )
+                    self.observer.start()
+                    print(f"📊 Monitoring log file (watchdog): {self.log_file}")
+                except RuntimeError as e:
+                    print(f"⚠️  Watchdog schedule failed ({e}), falling back to polling")
+                    self.observer = None
+                    self._start_polling()
+                    return
             else:
                 # Use polling mode
                 print(f"📊 Monitoring log file (polling): {self.log_file}")

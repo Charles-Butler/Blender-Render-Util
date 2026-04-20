@@ -13,18 +13,11 @@ function Navigation({ currentPage, onNavigate, renderStatus, canNavigate, onHelp
 
   const getPageStatus = (pageId) => {
     if (pageId === currentPage) return 'active'
-
-    // Monitor tab is disabled when status is idle
-    if (pageId === 'monitor' && renderStatus === 'idle') return 'disabled'
-
     if (!canNavigate) return 'disabled'
     return ''
   }
 
   const isPageDisabled = (pageId) => {
-    // Monitor tab is disabled when status is idle
-    if (pageId === 'monitor' && renderStatus === 'idle') return true
-
     return !canNavigate && pageId !== currentPage
   }
 
@@ -68,7 +61,7 @@ function Navigation({ currentPage, onNavigate, renderStatus, canNavigate, onHelp
                 className={`nav-item ${getPageStatus(page.id)}`}
                 onClick={() => handleNavigate(page.id)}
                 disabled={isPageDisabled(page.id)}
-                title={page.id === 'monitor' && renderStatus === 'idle' ? 'Start a render to access Monitor' : ''}
+                title=""
               >
                 <span className="nav-icon">
                   <FontAwesomeIcon icon={page.icon} />
@@ -111,7 +104,7 @@ function Navigation({ currentPage, onNavigate, renderStatus, canNavigate, onHelp
               <FontAwesomeIcon icon={faCircleQuestion} className="help-pill-icon" />
               <span>Help & Support</span>
             </button>
-            <div className="version-info">v5.2.1</div>
+            <div className="version-info">v5.3.0</div>
           </div>
         </div>
       </nav>
