@@ -19,8 +19,8 @@ const CHANGELOG = [
     date: '2026-04-19',
     sections: {
       Fixed: [
-        'Server restart no longer shows "Frame 0" and blank statistics on the Monitor page',
-        'monitor.py now greps Fra: lines on startup to restore current frame, frame time, and avg frame time for the active batch'
+        'Monitor page no longer shows "Frame 0" and blank statistics after restarting the app',
+        'Current frame, frame time, and average frame time are now restored correctly on startup'
       ]
     }
   },
@@ -29,12 +29,7 @@ const CHANGELOG = [
     date: '2026-04-18',
     sections: {
       Added: [
-        'PyInstaller bundle — produces native RenderManager.app for macOS',
-        'app/build.sh — single command builds the full app',
-        'Persistent config storage in ~/Library/Application Support/RenderManager/'
-      ],
-      Fixed: [
-        'Render script path now resolves correctly inside .app bundle'
+        'Settings are now saved persistently between sessions'
       ]
     }
   },
@@ -43,8 +38,7 @@ const CHANGELOG = [
     date: '2026-04-18',
     sections: {
       Added: [
-        'Native desktop app launcher via PyWebView — no browser window required',
-        'Accepts --blend-file CLI arg from Blender add-on'
+        'Native app window — no browser required'
       ]
     }
   },
@@ -52,9 +46,10 @@ const CHANGELOG = [
     version: '5.0.0',
     date: '2026-04-17',
     sections: {
-      Changed: [
-        'FastAPI now serves the pre-built React frontend directly — single server, no Vite dev server at runtime',
-        'All API URLs updated to relative paths (/api/...)'
+      Added: [
+        'Real-time render monitoring with WebSocket updates',
+        'Batch queue system with priority ordering',
+        'High/Low priority batch grouping on the Monitor page'
       ]
     }
   }
@@ -62,32 +57,24 @@ const CHANGELOG = [
 
 const TROUBLESHOOTING = [
   {
-    question: 'Monitor shows "Frame 0" and blank statistics after restarting the server',
-    answer: 'The server reads the log file on startup and restores state. Make sure you are running v5.2.1 or later. If the issue persists, check that the log file path in config.json is still valid.'
+    question: 'Monitor shows "Frame 0" and blank statistics after reopening the app',
+    answer: 'The app restores render state from the log file on startup. If this happens, check that the log file for the active render has not been moved or deleted. You can also re-select it on the Monitor page using the log file picker.'
   },
   {
-    question: '"No batch currently rendering" after server restart',
-    answer: 'The server parses "Now Rendering" and "Finished" lines from the log to reconstruct batch state. If the log file was moved or deleted, restart the render from the Configure page.'
+    question: '"No batch currently rendering" after reopening the app',
+    answer: 'The app scans the log file to reconstruct batch state. If the log file was moved or deleted since the render started, go to the Configure page and start a new render session.'
   },
   {
-    question: 'Frontend still shows an old version number',
-    answer: 'The React frontend is a static build. After any source change you must run npm run build inside server/frontend/ for the update to take effect. The server serves from the dist/ folder.'
-  },
-  {
-    question: 'Port 8081 already in use on startup',
-    answer: 'Another instance of the server is running. Kill it with: pkill -f "python3 app.py" or find the PID with lsof -i :8081 and kill it manually.'
-  },
-  {
-    question: 'Blender not found error when starting a render',
-    answer: 'Open the Configure page and verify the Blender executable path. The default is /Applications/Blender.app/Contents/MacOS/Blender. Update it to match your installation.'
+    question: 'Blender not found when starting a render',
+    answer: 'Open the Configure page and verify the Blender executable path. The default is /Applications/Blender.app/Contents/MacOS/Blender. Update it to match your Blender installation location.'
   },
   {
     question: 'Elapsed time shows a large negative number',
-    answer: 'This can happen if the render state from a previous session was not cleared. Click Cancel Job on the Configure page and start a fresh render.'
+    answer: 'This can happen if render state from a previous session was not cleared. Click Cancel Job on the Configure page to reset, then set up and start a new render.'
   },
   {
     question: 'Overall progress shows 100% before the render starts',
-    answer: 'Stale state from a prior render session. Cancel the current job on the Configure page to reset, then reconfigure and start a new render.'
+    answer: 'Stale state from a prior render session. Click Cancel Job on the Configure page to reset, then reconfigure and start a new render.'
   }
 ]
 

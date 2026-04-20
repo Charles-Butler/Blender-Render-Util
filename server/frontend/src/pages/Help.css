@@ -10,25 +10,27 @@
   gap: 20px;
   margin-bottom: 40px;
   padding-bottom: 30px;
-  border-bottom: 2px solid rgba(102, 126, 234, 0.15);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.25);
 }
 
 .help-header-icon {
   font-size: 3rem;
-  color: #667eea;
+  color: white;
   flex-shrink: 0;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
 }
 
 .help-title {
   font-size: 2rem;
   font-weight: 700;
-  color: #1e293b;
+  color: white;
   margin: 0 0 4px;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.2);
 }
 
 .help-subtitle {
   font-size: 1rem;
-  color: #64748b;
+  color: rgba(255, 255, 255, 0.8);
   margin: 0;
 }
 
@@ -42,15 +44,16 @@
   align-items: center;
   gap: 12px;
   margin-bottom: 20px;
-  color: #667eea;
+  color: rgba(255, 255, 255, 0.9);
   font-size: 1.1rem;
 }
 
 .section-heading h2 {
   font-size: 1.3rem;
   font-weight: 700;
-  color: #1e293b;
+  color: white;
   margin: 0;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.15);
 }
 
 /* Accordion */
@@ -206,7 +209,7 @@
 
 .contact-icon {
   font-size: 2rem;
-  color: #667eea;
+  color: #4f46e5;
   flex-shrink: 0;
   padding-top: 4px;
 }

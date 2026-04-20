@@ -105,13 +105,11 @@ function Navigation({ currentPage, onNavigate, renderStatus, canNavigate, onHelp
           {/* Version Footer */}
           <div className="nav-footer">
             <button
-              className={`nav-item help-item ${currentPage === 'help' ? 'active' : ''}`}
+              className={`help-pill ${currentPage === 'help' ? 'active' : ''}`}
               onClick={onHelp}
             >
-              <span className="nav-icon">
-                <FontAwesomeIcon icon={faCircleQuestion} />
-              </span>
-              <span className="nav-label">Help</span>
+              <FontAwesomeIcon icon={faCircleQuestion} className="help-pill-icon" />
+              <span>Help & Support</span>
             </button>
             <div className="version-info">v5.2.1</div>
           </div>

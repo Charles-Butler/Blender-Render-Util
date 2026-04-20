@@ -246,8 +246,35 @@
   border-top: 2px solid rgba(255, 255, 255, 0.2);
 }
 
-.help-item {
+.help-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 16px;
   margin-bottom: 12px;
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  text-align: left;
+}
+
+.help-pill:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.help-pill.active {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.help-pill-icon {
+  font-size: 1rem;
+  opacity: 0.9;
 }
 
 .version-info {
