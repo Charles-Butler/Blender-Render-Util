@@ -814,14 +814,28 @@ async def override_log_file(data: Dict[str, str]):
         render_state["log_file"] = logfile
         render_state["project_name"] = project_name
 
-        # Restore total_frames and configured_batches from config so the
-        # overall progress bar has a denominator when switching log files
+        # Restore total_frames from config if available, otherwise derive from
+        # batches detected in the log file (handles the case where the .app config
+        # doesn't know about the render because it was started via the dev server)
         config = get_config()
         current_render = config.get_current_render()
-        if current_render:
+        if current_render and current_render.get('total_frames'):
             render_state["total_frames"] = current_render.get('total_frames', 0)
             render_state["configured_batches"] = current_render.get('configured_batches', [])
             render_state["total_batches"] = len(render_state["configured_batches"])
+        elif monitor.state.get('batches'):
+            # Fall back to summing frames across all batches found in the log
+            total = sum(b.get('frames', 0) for b in monitor.state['batches'])
+            render_state["total_frames"] = total
+            render_state["total_batches"] = len(monitor.state['batches'])
+            print(f"✓ Derived total_frames from log: {total} across {render_state['total_batches']} batches")
+
+        # Recalculate overall_progress now that total_frames is set —
+        # the callback fired during monitor.start() when total_frames was still 0
+        if render_state["total_frames"] > 0 and render_state["frames_completed"] > 0:
+            render_state["overall_progress"] = int(
+                (render_state["frames_completed"] / render_state["total_frames"]) * 100
+            )
 
         config.set('monitoring', 'current_log_file', value=logfile)
 
