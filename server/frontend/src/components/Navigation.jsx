@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faGear, faChartBar, faArrowsRotate, faCaretLeft, faCaretRight } from '@fortawesome/free-solid-svg-icons'
+import { faGear, faChartBar, faArrowsRotate, faCaretLeft, faCaretRight, faCircleQuestion } from '@fortawesome/free-solid-svg-icons'
 import './Navigation.css'
 
-function Navigation({ currentPage, onNavigate, renderStatus, canNavigate }) {
+function Navigation({ currentPage, onNavigate, renderStatus, canNavigate, onHelp }) {
   const [isOpen, setIsOpen] = useState(false)
 
   const pages = [
@@ -104,6 +104,15 @@ function Navigation({ currentPage, onNavigate, renderStatus, canNavigate }) {
 
           {/* Version Footer */}
           <div className="nav-footer">
+            <button
+              className={`nav-item help-item ${currentPage === 'help' ? 'active' : ''}`}
+              onClick={onHelp}
+            >
+              <span className="nav-icon">
+                <FontAwesomeIcon icon={faCircleQuestion} />
+              </span>
+              <span className="nav-label">Help</span>
+            </button>
             <div className="version-info">v5.2.1</div>
           </div>
         </div>

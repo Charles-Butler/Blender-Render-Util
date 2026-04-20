@@ -246,6 +246,10 @@
   border-top: 2px solid rgba(255, 255, 255, 0.2);
 }
 
+.help-item {
+  margin-bottom: 12px;
+}
+
 .version-info {
   text-align: center;
   font-size: 0.8rem;

@@ -3,6 +3,7 @@ import './App.css'
 import Navigation from './components/Navigation'
 import ConfigureRender from './pages/ConfigureRender'
 import ProgressMonitor from './pages/ProgressMonitor'
+import Help from './pages/Help'
 
 function App() {
   const [currentPage, setCurrentPage] = useState('configure')
@@ -159,6 +160,10 @@ function App() {
     setCurrentPage(page)
   }
 
+  const handleHelp = () => {
+    setCurrentPage(currentPage === 'help' ? 'configure' : 'help')
+  }
+
   // Determine if navigation is allowed - allow navigation during rendering too
   const canNavigate = true
 
@@ -169,6 +174,7 @@ function App() {
         onNavigate={handleNavigate}
         renderStatus={renderState.status}
         canNavigate={canNavigate}
+        onHelp={handleHelp}
       />
 
       {currentPage === 'configure' && (
@@ -187,6 +193,8 @@ function App() {
           connected={connected}
         />
       )}
+
+      {currentPage === 'help' && <Help />}
     </div>
   )
 }
