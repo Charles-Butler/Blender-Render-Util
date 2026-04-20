@@ -25,7 +25,7 @@ from config_manager import get_config
 app = FastAPI(
     title="Blender Render Monitor",
     description="Real-time monitoring for Blender batch rendering",
-    version="5.2.1"
+    version="5.3.0"
 )
 
 # Enable CORS for development
@@ -192,7 +192,7 @@ async def websocket_endpoint(websocket: WebSocket):
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
-    return {"status": "healthy", "version": "5.2.1"}
+    return {"status": "healthy", "version": "5.3.0"}
 
 
 @app.get("/api/config")
@@ -814,8 +814,15 @@ async def override_log_file(data: Dict[str, str]):
         render_state["log_file"] = logfile
         render_state["project_name"] = project_name
 
-        # Update config
+        # Restore total_frames and configured_batches from config so the
+        # overall progress bar has a denominator when switching log files
         config = get_config()
+        current_render = config.get_current_render()
+        if current_render:
+            render_state["total_frames"] = current_render.get('total_frames', 0)
+            render_state["configured_batches"] = current_render.get('configured_batches', [])
+            render_state["total_batches"] = len(render_state["configured_batches"])
+
         config.set('monitoring', 'current_log_file', value=logfile)
 
         return {
@@ -851,6 +858,12 @@ async def startup_event():
     print(f"Server: http://localhost:{_server_port}")
     print(f"Network: http://{local_ip}:{_server_port}")
     print("="*60)
+
+    # Skip if monitor already started by main() before uvicorn launched
+    if monitor and monitor.running:
+        print("✓ Monitor already running (started in main)")
+        print("="*60)
+        return
 
     # Load current render configuration from config.json
     config = get_config()

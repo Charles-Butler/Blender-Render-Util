@@ -509,7 +509,15 @@ The script will automatically detect running Blender processes and offer to moni
   - Clean shutdown when window is closed
 - **`pywebview` added to requirements**
 
-### v5.2.1 - Post-Restart State Restoration _(Current)_
+### v5.3.0 - Help Page, App Icon & Reconnect Flow _(Current)_
+
+- Help & Support page in the nav sidebar — troubleshooting, changelog, GitHub issues link
+- Custom app icon in macOS dock and app switcher
+- Monitor tab always accessible — idle state shows a log picker to reconnect to a running render
+- Fixed watchdog crash on startup (double monitor registration)
+- Fixed overall progress showing wrong denominator when manually selecting a log
+
+### v5.2.1 - Post-Restart State Restoration
 
 - Fixed "Frame 0 / blank statistics" bug after server restart
 - `monitor.py` now greps `Fra:` lines on startup to restore `current_frame`,

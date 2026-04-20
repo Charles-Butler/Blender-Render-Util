@@ -5,6 +5,26 @@ All notable changes to Blender Batch Render Utilities will be documented in this
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.3.0] - 2026-04-20
+
+### Added
+- **Help & Support page** — accessible from the nav sidebar; includes troubleshooting guide,
+  changelog, and GitHub issues link
+- **App icon** — custom `.icns` icon now appears in the macOS dock and app switcher
+- **Idle Monitor reconnect view** — Monitor tab is always accessible; when no render is active
+  a "Select a Render Log" prompt lets users reconnect to an in-progress render without
+  going through the Configure page
+- **Manual log select restores total frames** — switching to a log file via the picker now
+  correctly restores `total_frames` and batch list from config so overall progress shows
+  the correct denominator (e.g. 385/427, not 385/0)
+
+### Fixed
+- **Watchdog double-start crash** — `startup_event` no longer creates a second `LogMonitor`
+  for the same path when `main()` already started one, eliminating the
+  `FSEventsEmitter: already scheduled` runtime error on startup
+
+---
+
 ## [5.2.1] - 2026-04-17
 
 ### Fixed
