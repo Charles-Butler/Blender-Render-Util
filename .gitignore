@@ -68,7 +68,7 @@ server/config.json
 app/build/
 app/dist/
 
-# Built React frontend (generated — run npm run build to recreate)
+# Built React frontend (generated - run npm run build to recreate)
 server/frontend/dist/
 
 # Node modules

@@ -9,7 +9,7 @@ APP_DIR="$ROOT/app"
 FRONTEND_DIR="$ROOT/server/frontend"
 
 echo "================================================"
-echo "  Render Manager — Build Script"
+echo "  Render Manager - Build Script"
 echo "================================================"
 
 # 1. Build React frontend

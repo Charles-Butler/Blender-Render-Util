@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Render Manager — Desktop App Launcher
+Render Manager - Desktop App Launcher
 Starts the FastAPI backend in a daemon thread, then opens a native
 PyWebView window. Shuts down cleanly when the window is closed.
 """
@@ -15,10 +15,10 @@ import urllib.error
 
 # Resolve paths for both dev and PyInstaller bundle modes
 if getattr(sys, 'frozen', False):
-    # Inside .app bundle — all files extracted to sys._MEIPASS
+    # Inside .app bundle - all files extracted to sys._MEIPASS
     BASE_DIR = sys._MEIPASS
 else:
-    # Running from source — server/ is one level up from app/
+    # Running from source - server/ is one level up from app/
     BASE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'server')
 
 BASE_DIR = os.path.abspath(BASE_DIR)
@@ -122,10 +122,10 @@ def main():
         print('❌ Failed to start server. Exiting.')
         sys.exit(1)
 
-    # Open native window — blocks until closed
+    # Open native window - blocks until closed
     open_window()
 
-    # Window closed — shut down server
+    # Window closed - shut down server
     print('👋 Window closed, shutting down...')
     server.should_exit = True
     thread.join(timeout=3)

@@ -58,11 +58,13 @@ npm run dev -- --host 0.0.0.0
 **2. Monitor Progress (Optional)**
 
 Terminal-based:
+
 ```bash
 ./watch_render_progress.sh /path/to/render_log.txt
 ```
 
 Or start web monitoring:
+
 ```bash
 cd server
 python3 app.py --port 8081 --logfile /path/to/render_log.txt --project "ProjectName" --batches 8 --frames 527
@@ -467,12 +469,12 @@ The script will automatically detect running Blender processes and offer to moni
 - **"Frame X outside batch range" error on batch transition**:
   - `batch_name` regex matched the same log line as `batch_start` and was evaluated first, silently skipping `batch_start` for every batch after the first
   - `batch_start_frame`/`batch_end_frame` were never updated on batch transitions, causing negative batch progress and the spurious "outside batch range" warning
-  - Removed the redundant `batch_name` early-return block — name and priority extraction already handled inside `batch_start`
+  - Removed the redundant `batch_name` early-return block - name and priority extraction already handled inside `batch_start`
 
 ### v4.3 - Project Cleanup & Reorganization
 
 - **Removed Legacy & Redundant Files**:
-  - `server/static/index.html` (v2.3.1 HTML dashboard — replaced by React frontend)
+  - `server/static/index.html` (v2.3.1 HTML dashboard - replaced by React frontend)
   - Broken test files: `test_full_stack.sh`, `test_server.py`, `test_launch.sh`, `test_render.log`
   - Unused template assets: `vite.svg`, `react.svg`
 - **Reorganized Project Structure**:
@@ -488,18 +490,18 @@ The script will automatically detect running Blender processes and offer to moni
 ### v5.0 - Self-Contained Server Architecture
 
 - **Frontend served by FastAPI directly**:
-  - React app pre-built via `npm run build` — no Vite dev server at runtime
+  - React app pre-built via `npm run build` - no Vite dev server at runtime
   - `frontend/dist/` mounted as static files, eliminating the two-terminal startup
   - Single command to run the full app: `python3 app.py`
 - **Relative API URLs throughout frontend**:
   - All `http://localhost:8081/api/...` replaced with `/api/...`
-  - WebSocket uses `window.location.host` — works on any port or hostname
+  - WebSocket uses `window.location.host` - works on any port or hostname
   - Foundation for PyWebView packaging (Phase 2)
 - **Default port unified to `8081`**
 
 ### v5.1 - Native Desktop App Launcher
 
-- **`app/launcher.py`** — Native desktop window via PyWebView:
+- **`app/launcher.py`** - Native desktop window via PyWebView:
   - Starts FastAPI backend in a daemon thread, no terminal visible to user
   - Polls `/health` before opening UI (15s timeout)
   - Native OS window at 1280×820, resizable, no browser chrome
@@ -515,12 +517,12 @@ The script will automatically detect running Blender processes and offer to moni
 
 ### v5.2 - PyInstaller macOS Bundle
 
-- **`app/RenderManager.spec`** — PyInstaller bundle definition:
+- **`app/RenderManager.spec`** - PyInstaller bundle definition:
   - Packages Python runtime, all dependencies, and pre-built React frontend
-  - Produces a standalone `RenderManager.app` — no Python, Node, or terminal required
+  - Produces a standalone `RenderManager.app` - no Python, Node, or terminal required
   - Persistent config stored in `~/Library/Application Support/RenderManager/`
   - Dark mode support, proper macOS bundle metadata
-- **`app/build.sh`** — single command builds the full app
+- **`app/build.sh`** - single command builds the full app
 - Render script path fixed for bundle mode (`sys._MEIPASS` when frozen)
 
 ---
@@ -752,4 +754,3 @@ git push origin develop
 - [ ] Frame preview thumbnails in dashboard
 - [ ] Pause/resume batch rendering
 - [ ] Historical render statistics and analytics
-

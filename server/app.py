@@ -447,7 +447,7 @@ async def start_render(render_config: Dict[str, Any]):
         print(f"✓ Created render config at: {temp_config_path}")
         print(f"✓ Config: {json.dumps(config_data, indent=2)}")
 
-        # Locate render script — bundled app uses sys._MEIPASS, dev uses repo root
+        # Locate render script - bundled app uses sys._MEIPASS, dev uses repo root
         import sys as _sys
         if getattr(_sys, 'frozen', False):
             script_dir = Path(_sys._MEIPASS)
@@ -1133,7 +1133,7 @@ def main():
     )
 
 
-# Serve pre-built React frontend — must be mounted AFTER all API routes
+# Serve pre-built React frontend - must be mounted AFTER all API routes
 # so that API paths take precedence over the static file handler
 _dist_dir = Path(__file__).parent / "frontend" / "dist"
 if _dist_dir.exists():

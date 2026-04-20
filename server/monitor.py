@@ -223,7 +223,7 @@ class LogMonitor:
                     if has_incomplete:
                         self.callback({'status': 'rendering'})
 
-                        # Broadcast current batch info — _read_existing_content sets
+                        # Broadcast current batch info - _read_existing_content sets
                         # self.state locally but never pushes it to render_state via callback,
                         # so current_batch stays 0 on the frontend after a server restart.
                         current = next(
@@ -257,7 +257,7 @@ class LogMonitor:
                                             if current['start'] <= frame <= current['end']:
                                                 frame_seconds = self._time_to_seconds(match.group(2))
                                                 if self.state['current_frame'] == 0:
-                                                    # First (most recent) hit — use as current frame
+                                                    # First (most recent) hit - use as current frame
                                                     self.state['current_frame'] = frame
                                                     self.state['frame_times'].append(frame_seconds)
                                                     recent_times.append(frame_seconds)
