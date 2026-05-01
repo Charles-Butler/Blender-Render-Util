@@ -104,15 +104,16 @@ function App() {
       const data = await response.json()
 
       if (data.status === 'ok') {
-        console.log('Render started successfully. Waiting 5 seconds for log file generation...')
+        console.log('Render started — switching to monitor page')
 
-        // Wait 5 seconds for the bash script to create the log file
-        // before switching to monitor page
+        // Short pause so WebSocket state (status=rendering + batch list) can
+        // propagate before we show the monitor page. The server polls for the
+        // log file in the background; the monitor shows a "starting up" state
+        // until frame data begins flowing.
         setTimeout(() => {
           setIsStartingRender(false)
           setCurrentPage('monitor')
-          console.log('Switched to monitor page')
-        }, 5000)
+        }, 1000)
       } else {
         setIsStartingRender(false)
         alert(`Failed to start render: ${data.message}`)

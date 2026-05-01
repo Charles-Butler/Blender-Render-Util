@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faFolderOpen, faGlobe, faChartBar, faTriangleExclamation,
   faChartLine, faStopwatch, faClock, faBolt, faLevelDown,
-  faCheckCircle, faFileLines, faFilm, faGear
+  faCheckCircle, faFileLines, faFilm, faGear, faArrowsRotate
 } from '@fortawesome/free-solid-svg-icons'
 import '../App.css'
 
@@ -80,6 +80,7 @@ function ProgressMonitor({ renderState, connected }) {
   const [elapsedTime, setElapsedTime] = useState('00:00:00')
   const [currentLogFile, setCurrentLogFile] = useState('')
   const [showFilePicker, setShowFilePicker] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   const formatSeconds = (seconds) => {
     if (!seconds) return '--:--'
@@ -171,6 +172,59 @@ function ProgressMonitor({ renderState, connected }) {
       console.error('Error switching log file:', error)
       alert('Failed to switch log file. Check console for details.')
     }
+  }
+
+  const handleRefreshMonitor = async () => {
+    const logFile = renderState.log_file || currentLogFile
+    if (!logFile) return
+    setIsRefreshing(true)
+    try {
+      const response = await fetch('/api/monitor/override', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ logfile: logFile })
+      })
+      const data = await response.json()
+      if (data.status === 'ok') {
+        setCurrentLogFile(logFile)
+      } else {
+        console.error('Refresh failed:', data.message)
+      }
+    } catch (error) {
+      console.error('Error refreshing monitor:', error)
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
+
+  // Starting-up view — render is queued but log file hasn't appeared yet
+  const isStartingUp = renderState.status === 'rendering'
+    && renderState.current_batch === 0
+    && renderState.frames_completed === 0
+
+  if (isStartingUp) {
+    return (
+      <div className="progress-monitor">
+        <div className="container">
+          <div className="card full-width reconnect-card">
+            <div className="reconnect-icon" style={{ animation: 'spin 1.5s linear infinite' }}>
+              <FontAwesomeIcon icon={faFilm} />
+            </div>
+            <h2 className="reconnect-title">
+              {renderState.project_name ? `Starting ${renderState.project_name}…` : 'Render Starting Up…'}
+            </h2>
+            <p className="reconnect-subtitle">
+              Blender is initialising. Frame progress will appear here once the first batch begins.
+            </p>
+            {renderState.total_frames > 0 && (
+              <p className="reconnect-subtitle" style={{ marginTop: '4px', opacity: 0.7 }}>
+                {renderState.total_batches} batch{renderState.total_batches !== 1 ? 'es' : ''} · {renderState.total_frames} frames queued
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    )
   }
 
   // Idle reconnect view — shown when no render is active
@@ -420,13 +474,26 @@ function ProgressMonitor({ renderState, connected }) {
             <div className="card-title">
               <FontAwesomeIcon icon={faFileLines} /> Currently Monitoring
             </div>
-            <button
-              className="btn-icon-settings"
-              onClick={() => setShowFilePicker(true)}
-              title="Switch Render"
-            >
-              <FontAwesomeIcon icon={faGear} />
-            </button>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <button
+                className="btn-icon-settings"
+                onClick={handleRefreshMonitor}
+                title="Refresh monitor (reconnect to current log)"
+                disabled={isRefreshing}
+              >
+                <FontAwesomeIcon
+                  icon={faArrowsRotate}
+                  className={isRefreshing ? 'rotating' : ''}
+                />
+              </button>
+              <button
+                className="btn-icon-settings"
+                onClick={() => setShowFilePicker(true)}
+                title="Switch Render"
+              >
+                <FontAwesomeIcon icon={faGear} />
+              </button>
+            </div>
           </div>
           <div className="log-info-content">
             <div className="log-info-row">
