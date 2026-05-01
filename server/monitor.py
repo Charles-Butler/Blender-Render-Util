@@ -23,13 +23,14 @@ except ImportError:
 class LogMonitor:
     """Monitors Blender render log file for progress updates"""
 
-    def __init__(self, log_file: str, callback: Callable[[Dict[str, Any]], None]):
+    def __init__(self, log_file: str, callback: Callable[[Dict[str, Any]], None], force_polling: bool = False):
         self.log_file = Path(log_file)
         self.callback = callback
         self.observer = None
         self.file_handler = None
         self.last_position = 0
         self.running = False
+        self.force_polling = force_polling  # skip watchdog; use 500ms polling
 
         # Regex patterns for parsing Blender output
         self.patterns = {
@@ -76,7 +77,7 @@ class LogMonitor:
             # Start initial file read FIRST (before polling to avoid double-counting)
             self._read_existing_content()
 
-            if WATCHDOG_AVAILABLE:
+            if WATCHDOG_AVAILABLE and not self.force_polling:
                 try:
                     self.file_handler = LogFileHandler(self.log_file, self.process_new_lines)
                     self.observer = Observer()
@@ -86,6 +87,19 @@ class LogMonitor:
                         recursive=False
                     )
                     self.observer.start()
+                    # Give the FSEvents emitter thread a moment to register.
+                    # If it crashes (e.g. "already scheduled" on macOS), fall back to polling.
+                    time.sleep(0.3)
+                    emitters_alive = [e.is_alive() for e in self.observer._emitters]
+                    if not emitters_alive or not all(emitters_alive):
+                        print(f"⚠️  Watchdog emitter failed, falling back to polling")
+                        try:
+                            self.observer.stop()
+                        except Exception:
+                            pass
+                        self.observer = None
+                        self._start_polling()
+                        return
                     print(f"📊 Monitoring log file (watchdog): {self.log_file}")
                 except RuntimeError as e:
                     print(f"⚠️  Watchdog schedule failed ({e}), falling back to polling")
@@ -93,7 +107,9 @@ class LogMonitor:
                     self._start_polling()
                     return
             else:
-                # Use polling mode
+                # Polling mode — used for new renders (force_polling=True) or when
+                # watchdog is unavailable.  500ms interval is more reliable than
+                # FSEvents on newly-created directories.
                 print(f"📊 Monitoring log file (polling): {self.log_file}")
                 self._start_polling()
 
@@ -188,6 +204,25 @@ class LogMonitor:
                         start, end = int(match.group(1)), int(match.group(2))
                         completed_ranges.add((start, end))
 
+            # Grep priority lines — appear on the "Batch: ... [Priority: X]" line
+            # immediately after each "Now Rendering" line in the log.
+            # Build an ordered list so we can zip with batch starts by position.
+            priority_result = subprocess.run(
+                ['grep', 'Priority:', str(self.log_file)],
+                capture_output=True, text=True
+            )
+            priorities_from_log = []
+            if priority_result.returncode == 0:
+                for pline in priority_result.stdout.strip().split('\n'):
+                    if not pline:
+                        continue
+                    p_match = self.patterns['batch_priority'].search(pline)
+                    if p_match:
+                        raw = p_match.group(1)
+                        priorities_from_log.append(
+                            '1' if raw in ('1', 'H') else '0' if raw in ('0', 'L') else 'null'
+                        )
+
             # Build batch list from starts
             if batch_starts.returncode == 0:
                 for line_num, line in enumerate(batch_starts.stdout.strip().split('\n'), 1):
@@ -203,12 +238,15 @@ class LogMonitor:
                         name_match = self.patterns['batch_name'].search(line)
                         batch_name = name_match.group(1).strip() if name_match else f'Batch {line_num}'
 
+                        # Use log-derived priority if available, else null (no priority)
+                        priority = priorities_from_log[line_num - 1] if line_num - 1 < len(priorities_from_log) else 'null'
+
                         batch_info = {
                             'number': line_num,
                             'start': start,
                             'end': end,
                             'frames': end - start + 1,
-                            'priority': '1',  # Default to high priority (will be updated if we see priority markers)
+                            'priority': priority,
                             'completed': is_completed,
                             'name': batch_name
                         }
@@ -300,12 +338,14 @@ class LogMonitor:
                         self.callback({'start_time': start_time})
                         print(f"✓ Render started at: {dt.strftime('%Y-%m-%d %H:%M:%S')}")
 
-            # Mark initial scan complete
+            # Always mark the initial scan complete and seek to EOF, regardless of
+            # whether "Now Rendering" lines were found.  Without this, a brand-new log
+            # (render header written but Blender hasn't started yet) leaves
+            # initial_scan_complete = False, and parse_line()'s guard on lines 519/528
+            # silently drops every subsequent "Append frame" line → zero frame progress.
             self.state['initial_scan_complete'] = True
-
-            # Set file position to end so we only monitor new lines
             with open(self.log_file, 'r') as f:
-                f.seek(0, 2)  # Seek to end
+                f.seek(0, 2)  # Seek to end of whatever is written so far
                 self.last_position = f.tell()
 
         except Exception as e:
@@ -340,6 +380,20 @@ class LogMonitor:
     def parse_line(self, line: str):
         """Parse a single log line and extract information"""
         if not line:
+            return
+
+        # Priority line comes right after "Now Rendering" — update the current batch
+        if 'Priority:' in line and self.state['current_batch'] > 0:
+            priority_match = self.patterns['batch_priority'].search(line)
+            if priority_match:
+                raw = priority_match.group(1)
+                priority = '1' if raw in ('1', 'H') else '0' if raw in ('0', 'L') else 'null'
+                self.state['current_batch_priority'] = priority
+                for batch in self.state['batches']:
+                    if batch['number'] == self.state['current_batch']:
+                        batch['priority'] = priority
+                        break
+                self._send_batch_stats()
             return
 
         # Check for batch start

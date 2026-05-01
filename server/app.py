@@ -430,9 +430,11 @@ async def start_render(render_config: Dict[str, Any]):
         log_file = output_dir / f"{project_name}_{timestamp}_render_log.txt"
 
         # Create a temporary JSON config file for the bash script to read
+        blender_path = get_config().get_blender_executable()
         config_data = {
             "project_name": project_name,
             "blend_file": blend_file,
+            "blender_path": blender_path,
             "batches": batches,
             "output_dir": str(output_dir),
             "log_file": str(log_file),
@@ -531,17 +533,8 @@ async def start_render(render_config: Dict[str, Any]):
         global monitor, current_log_file
         current_log_file = str(log_file)
 
-        # Give the script time to create the log file (5 seconds)
-        # This matches the frontend delay before switching to monitor page
-        print("⏳ Waiting 5 seconds for log file generation...")
-        await asyncio.sleep(5)
-
         if monitor:
             monitor.stop()
-
-        print(f"📊 Starting log monitor for: {log_file}")
-        monitor = LogMonitor(str(log_file), update_render_state)
-        monitor.start()
 
         # Reset stale state from any previous render before applying new values
         render_state["frames_completed"] = 0
@@ -577,6 +570,11 @@ async def start_render(render_config: Dict[str, Any]):
         print(f"   - Project: {project_name}")
         print(f"   - Batches: {len(configured_batches)}")
         print(f"   - Total Frames: {total_frames}")
+
+        # Background task: poll until the log file exists, then start the monitor.
+        # This avoids a blocking sleep in the endpoint while still ensuring the
+        # monitor only starts once the bash script has actually created the file.
+        asyncio.create_task(_start_monitor_when_ready(str(log_file)))
 
         return {
             "status": "ok",
@@ -806,6 +804,10 @@ async def override_log_file(data: Dict[str, str]):
         # Start new monitor with new log file
         print(f"📊 Switching to monitor log file: {logfile}")
         print(f"📊 Project name: {project_name}")
+
+        # Assume rendering until the merge step can confirm otherwise
+        render_state["status"] = "rendering"
+
         monitor = LogMonitor(logfile, update_render_state)
         monitor.start()
 
@@ -814,9 +816,10 @@ async def override_log_file(data: Dict[str, str]):
         render_state["log_file"] = logfile
         render_state["project_name"] = project_name
 
-        # Restore total_frames from config if available, otherwise derive from
-        # batches detected in the log file (handles the case where the .app config
-        # doesn't know about the render because it was started via the dev server)
+        # Restore total_frames and configured_batches (with priorities) from config
+        # if available, otherwise derive totals from batches detected in the log file
+        # (handles the case where the .app config doesn't know about the render
+        # because it was started via the dev server)
         config = get_config()
         current_render = config.get_current_render()
         if current_render and current_render.get('total_frames'):
@@ -829,6 +832,10 @@ async def override_log_file(data: Dict[str, str]):
             render_state["total_frames"] = total
             render_state["total_batches"] = len(monitor.state['batches'])
             print(f"✓ Derived total_frames from log: {total} across {render_state['total_batches']} batches")
+
+        # Merge configured_batches (which carry priority) with log-detected batches
+        # so priority is preserved after restart/reconnect
+        _merge_batch_states()
 
         # Recalculate overall_progress now that total_frames is set —
         # the callback fired during monitor.start() when total_frames was still 0
@@ -938,6 +945,39 @@ def get_local_ip() -> str:
         return "127.0.0.1"
 
 
+async def _start_monitor_when_ready(log_file_path: str, timeout: int = 60):
+    """
+    Poll until the log file exists and has content, then start the LogMonitor.
+    Runs as a background asyncio task so the /api/render/start endpoint can
+    return immediately without blocking the client.
+    """
+    global monitor
+    log_path = Path(log_file_path)
+    deadline = asyncio.get_event_loop().time() + timeout
+
+    print(f"⏳ Waiting for log file to appear: {log_file_path}")
+
+    while asyncio.get_event_loop().time() < deadline:
+        if log_path.exists() and log_path.stat().st_size > 0:
+            print(f"📊 Log file ready — starting monitor (polling mode)")
+            try:
+                if monitor:
+                    monitor.stop()
+                # force_polling=True: skip watchdog/FSEvents which is unreliable on
+                # newly-created render directories; 500ms polling is fast enough.
+                monitor = LogMonitor(log_file_path, update_render_state, force_polling=True)
+                monitor.start()
+                _merge_batch_states()
+            except Exception as e:
+                print(f"❌ Error starting monitor after log appeared: {e}")
+                import traceback
+                traceback.print_exc()
+            return
+        await asyncio.sleep(1)
+
+    print(f"⚠️  Timed out ({timeout}s) waiting for log file: {log_file_path}")
+
+
 def _merge_batch_states():
     """
     Merge configured_batches with log-detected batches to show complete queue.
@@ -948,7 +988,17 @@ def _merge_batch_states():
     configured = render_state.get("configured_batches", [])
 
     if not configured:
-        # No configured batches, just use log batches from monitor
+        # No configured batches — fall back to log-detected batches only.
+        # If high/low priority lists are empty and the completed list has entries,
+        # every log-detected batch finished → mark the render completed.
+        if (not render_state.get("high_priority_list") and
+                not render_state.get("low_priority_list") and
+                render_state.get("completed_list")):
+            import time as _time
+            if not render_state.get('end_time'):
+                render_state['end_time'] = _time.time()
+            render_state['status'] = 'completed'
+            print("✅ All log-detected batches completed (no configured_batches)")
         return
 
     # Collect all log batches from monitor's priority lists
