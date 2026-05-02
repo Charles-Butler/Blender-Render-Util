@@ -25,7 +25,7 @@ from config_manager import get_config
 app = FastAPI(
     title="Blender Render Monitor",
     description="Real-time monitoring for Blender batch rendering",
-    version="5.4.1"
+    version="5.4.2"
 )
 
 # Enable CORS for development
@@ -193,7 +193,7 @@ async def websocket_endpoint(websocket: WebSocket):
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
-    return {"status": "healthy", "version": "5.4.1"}
+    return {"status": "healthy", "version": "5.4.2"}
 
 
 @app.get("/api/config")

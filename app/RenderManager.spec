@@ -104,8 +104,8 @@ app = BUNDLE(
     info_plist={
         'CFBundleName':              'Render Manager',
         'CFBundleDisplayName':       'Render Manager',
-        'CFBundleShortVersionString': '5.4.1',
-        'CFBundleVersion':           '5.4.1',
+        'CFBundleShortVersionString': '5.4.2',
+        'CFBundleVersion':           '5.4.2',
         'NSHighResolutionCapable':   True,
         'NSRequiresAquaSystemAppearance': False,  # Supports dark mode
     },

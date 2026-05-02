@@ -15,7 +15,7 @@ import './Help.css';
 
 const CHANGELOG = [
   {
-    version: '5.4.1',
+    version: '5.4.2',
     date: '2026-04-19',
     sections: {
       Fixed: [

@@ -509,7 +509,22 @@ The script will automatically detect running Blender processes and offer to moni
   - Clean shutdown when window is closed
 - **`pywebview` added to requirements**
 
-### v5.3.1 - Progress Bar Fix _(Current)_
+### v5.4.2 - Thread-Safe WebSocket Broadcasts _(Current)_
+
+- Fixed frame updates being silently dropped — `asyncio.create_task()` from the background polling thread is not thread-safe in Python 3.10+ and raised `RuntimeError` which was caught and swallowed; replaced with `asyncio.run_coroutine_threadsafe()` against the main event loop so every frame update pushes to the WebSocket immediately instead of waiting for the next 2-second heartbeat
+
+### v5.4.1 - Monitoring Reliability & Priority Restoration
+
+- Fixed monitoring permanently freezing mid-render — `process_new_lines()` rewritten with binary-mode reads and partial-line protection (only processes bytes up to the last `\n` per poll, preventing the race condition where a 500 ms poll firing mid-Blender-write caused a partial line to silently consume the byte offset and drop the subsequent frame)
+- Fixed binary/text mode offset mismatch — EOF seek now uses `'rb'` so `last_position` is always a plain byte offset; the previous text-mode `tell()` cookie was incompatible with a fresh file handle, causing `UnicodeDecodeError` on log files containing the 🎬 emoji and freezing the monitor permanently
+- Fixed `initial_scan_complete` never set for brand-new logs — the flag was inside `if batch_starts.returncode == 0:` so a fresh log (no "Now Rendering" lines yet) left the flag `False` and silently dropped every subsequent "Append frame" line
+- Fixed batch priorities all showing as low after app restart or log re-select — `_merge_batch_states()` now called immediately after `configured_batches` is restored
+- Fixed "Cancel Job" stuck on completed render — monitor now detects all log-detected batches in `completed_list` and transitions status to `'completed'`
+- Fixed bash render script opening interactive terminal with no config — `RENDER_CONFIG_FILE` env var is now detected and all parameters read from the JSON config (CONFIG_MODE), skipping all prompts
+- Added ↻ Refresh button on Monitor page to hard-reconnect the file monitor without leaving the page
+- Added "Starting up…" loading view when a render has started but no frame data has arrived yet
+
+### v5.3.1 - Progress Bar Fix
 
 - Fixed overall progress bar showing empty after manually selecting a log file
 - Fixed `total_frames` always 0 on first launch — now derived from log batches when config has no record of the render

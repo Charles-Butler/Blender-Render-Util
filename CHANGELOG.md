@@ -5,6 +5,20 @@ All notable changes to Blender Batch Render Utilities will be documented in this
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.4.2] - 2026-05-02
+
+### Fixed
+- **WebSocket progress updates dropped from background thread** — `update_render_state()` is
+  called from the log-monitor polling thread, not the asyncio event loop.  The previous
+  `asyncio.create_task()` call is not thread-safe and silently failed in Python 3.10+
+  (`RuntimeError: no running event loop` for the calling thread), meaning the only live push
+  reaching the client was the 2-second heartbeat.  Fixed by capturing `_main_loop` at server
+  startup and scheduling broadcasts with `asyncio.run_coroutine_threadsafe(coro, _main_loop)`,
+  which is the correct API for cross-thread coroutine scheduling.  Frame updates now push
+  immediately to every connected WebSocket instead of waiting up to 2 seconds.
+
+---
+
 ## [5.4.1] - 2026-05-01
 
 ### Fixed
