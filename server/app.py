@@ -25,7 +25,7 @@ from config_manager import get_config
 app = FastAPI(
     title="Blender Render Monitor",
     description="Real-time monitoring for Blender batch rendering",
-    version="5.3.1"
+    version="5.4.1"
 )
 
 # Enable CORS for development
@@ -39,6 +39,7 @@ app.add_middleware(
 
 # Global state
 _server_port: int = 8081  # Updated by main() before uvicorn starts
+_main_loop: Optional[asyncio.AbstractEventLoop] = None  # Set on startup; used for thread-safe scheduling
 monitor: Optional[LogMonitor] = None
 current_log_file: str = ""
 render_state: Dict[str, Any] = {
@@ -192,7 +193,7 @@ async def websocket_endpoint(websocket: WebSocket):
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
-    return {"status": "healthy", "version": "5.3.1"}
+    return {"status": "healthy", "version": "5.4.1"}
 
 
 @app.get("/api/config")
@@ -864,7 +865,11 @@ async def override_log_file(data: Dict[str, str]):
 @app.on_event("startup")
 async def startup_event():
     """Initialize services on startup"""
-    global monitor, current_log_file, render_state
+    global monitor, current_log_file, render_state, _main_loop
+    # Capture the event loop so background threads can schedule coroutines on it
+    # via asyncio.run_coroutine_threadsafe() — asyncio.create_task() is not
+    # thread-safe and silently fails when called from a non-asyncio thread.
+    _main_loop = asyncio.get_event_loop()
 
     print("="*60)
     print("🚀 Blender Render Monitor Starting...")
@@ -1123,17 +1128,15 @@ def update_render_state(updates: Dict[str, Any]):
     except Exception as e:
         print(f"Error merging batch states: {e}")
 
-    # Broadcast to all connected WebSocket clients (non-blocking)
-    try:
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            asyncio.create_task(manager.broadcast({
-                "type": "progress",
-                "data": render_state
-            }))
-    except RuntimeError:
-        # No event loop running yet, skip broadcast
-        pass
+    # Broadcast to all connected WebSocket clients (non-blocking, thread-safe).
+    # update_render_state() is called from the background polling thread, so we
+    # cannot use asyncio.create_task() (not thread-safe).  Instead we schedule
+    # the coroutine on the main event loop captured at startup.
+    if _main_loop is not None and _main_loop.is_running():
+        asyncio.run_coroutine_threadsafe(
+            manager.broadcast({"type": "progress", "data": dict(render_state)}),
+            _main_loop
+        )
 
 
 def seconds_to_time_str(seconds: int) -> str:

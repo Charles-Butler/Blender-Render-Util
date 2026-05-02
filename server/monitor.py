@@ -341,30 +341,51 @@ class LogMonitor:
             # Always mark the initial scan complete and seek to EOF, regardless of
             # whether "Now Rendering" lines were found.  Without this, a brand-new log
             # (render header written but Blender hasn't started yet) leaves
-            # initial_scan_complete = False, and parse_line()'s guard on lines 519/528
-            # silently drops every subsequent "Append frame" line → zero frame progress.
+            # initial_scan_complete = False, and parse_line()'s guard silently drops
+            # every subsequent "Append frame" line → zero frame progress.
+            # Use binary mode so last_position is a plain byte offset, consistent
+            # with the binary reads in process_new_lines().
             self.state['initial_scan_complete'] = True
-            with open(self.log_file, 'r') as f:
-                f.seek(0, 2)  # Seek to end of whatever is written so far
+            with open(self.log_file, 'rb') as f:
+                f.seek(0, 2)  # Seek to end in binary mode
                 self.last_position = f.tell()
 
         except Exception as e:
             print(f"Error reading log file: {e}")
 
     def process_new_lines(self):
-        """Process new lines added to the log file"""
+        """Process new lines added to the log file.
+
+        Uses binary-mode reads so that self.last_position is always a true byte
+        offset (consistent with the binary-mode EOF seek in _read_existing_content).
+        Only complete lines (those ending with \\n) are processed; any trailing
+        partial line is left in place and will be picked up on the next poll.
+        This avoids the race condition where a 500 ms poll fires mid-write and
+        the partial line fails to match any regex, silently dropping a frame.
+        """
         try:
-            with open(self.log_file, 'r') as f:
+            with open(self.log_file, 'rb') as f:
                 f.seek(self.last_position)
-                new_lines = f.readlines()
+                data = f.read()
 
-                # Update position AFTER successfully reading
-                if new_lines:
-                    self.last_position = f.tell()
+            if not data:
+                return
 
-                for line in new_lines:
+            # Only consume bytes up to (and including) the last newline so we
+            # never hand a partial line to parse_line().
+            last_newline = data.rfind(b'\n')
+            if last_newline == -1:
+                return  # No complete line available yet; wait for next poll
+
+            complete_data = data[:last_newline + 1]
+            self.last_position += len(complete_data)
+
+            text = complete_data.decode('utf-8', errors='replace')
+            for line in text.splitlines():
+                line = line.strip()
+                if line:
                     try:
-                        self.parse_line(line.strip())
+                        self.parse_line(line)
                     except Exception as parse_error:
                         print(f"Error parsing line: {parse_error}")
                         import traceback
