@@ -5,6 +5,44 @@ All notable changes to Blender Batch Render Utilities will be documented in this
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.4.1] - 2026-05-01
+
+### Fixed
+- **Frame monitoring stuck (only elapsed time updating)** — `process_new_lines()` rewritten to
+  use binary-mode file reads with partial-line protection: only bytes up to the last `\n` are
+  consumed per poll, eliminating the race condition where a 500 ms poll would fire mid-write,
+  produce a partial line that matched nothing, and advance `last_position` past the start of
+  that line so the remaining fragment was also silently dropped
+- **Binary / text mode offset mismatch** — EOF seek in `_read_existing_content()` switched to
+  binary mode (`'rb'`) so `last_position` is always a plain byte offset consistent with the
+  binary reads in `process_new_lines()`; text-mode "cookie" values on some platforms caused
+  seek errors that swallowed entire blocks of log output
+- **Batch priority lost after restart / log re-select** — `_merge_batch_states()` is now called
+  in the override endpoint after `configured_batches` is restored, so log-detected batches
+  inherit the original high/low priority from the render config instead of all showing as low
+- **"Cancel Job" stuck on completed render** — when loading a finished log with no active
+  `configured_batches`, the monitor now detects that all log-detected batches are in
+  `completed_list` and transitions `status` to `'completed'`
+- **Bash script opened interactively when launched from app** — script now detects the
+  `RENDER_CONFIG_FILE` env var written by the Python backend and reads all render parameters
+  from that JSON file (CONFIG_MODE), skipping all interactive prompts
+- **`initial_scan_complete` never set for brand-new log files** — the flag and EOF-seek were
+  inside `if batch_starts.returncode == 0:`, so a new log with no "Now Rendering" lines yet
+  left the flag `False`; every subsequent "Append frame" line was silently dropped because
+  `parse_line()` guards frame counting behind this flag
+
+### Added
+- **Refresh button on Monitor page** — gear-area ↻ button calls `/api/monitor/override` with
+  the current log path to hard-reconnect the file monitor without leaving the page; the icon
+  spins while the request is in flight
+- **"Starting up…" state** — Monitor shows a dedicated loading view when a render has been
+  initiated but no frame data has arrived yet (`status === 'rendering'` and `current_batch === 0`)
+- **Non-interactive bash render script** — `batchedFrame_render.sh` CONFIG_MODE reads all
+  parameters from `RENDER_CONFIG_FILE` JSON via `python3 -c`, auto-confirms the render start
+  prompt, and proceeds without any terminal interaction
+
+---
+
 ## [5.3.1] - 2026-04-20
 
 ### Fixed
